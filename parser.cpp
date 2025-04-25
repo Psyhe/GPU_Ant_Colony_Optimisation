@@ -5,6 +5,8 @@
 #include <sstream>
 #include <iomanip>
 
+#include "seq.h"
+
 struct City {
     double x, y;
 };
@@ -71,6 +73,21 @@ int main(int argc, char* argv[]) {
         }
         std::cout << "\n";
     }
+
+    std::cout << endl;
+
+    double alpha = 1.0;
+    double beta = 1.0;
+    double evaporation_rate = 0.5;
+    double Q = 1.0;
+
+    int n_cities = dimension;
+    int n_iterations = 20;
+    int n_ants = 10;
+
+    ant_colony_optimization(dist, 
+        alpha, beta, evaporation_rate,
+        n_iterations, n_ants, n_cities, Q);
 
     return 0;
 }
