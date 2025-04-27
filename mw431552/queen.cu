@@ -75,9 +75,8 @@ __global__ void queenAntKernel(float *choice_info, float *distances, int *tours,
         // Add return to start city
         tour_len += distances[current_city * n_cities + tours[queen_id * n_cities]];
         tour_lengths[queen_id] = tour_len;
+        states[queen_id] = state;
     }
-
-    states[queen_id] = state;
 }
 
 void queen(const std::vector<std::vector<float>>& graph, int num_iter, float alpha, float beta, float evaporate, int seed, std::string output_file) {
