@@ -203,7 +203,7 @@ void worker(const std::vector<std::vector<float>>& graph, int num_iter, float al
     std::vector<float> tour_lengths_host(m);
 
     for (int iter = 0; iter < num_iter; ++iter) {
-        std::cout << "\n=== Iteration " << iter + 1 << " ===\n";
+        // std::cout << "\n=== Iteration " << iter + 1 << " ===\n";
 
         workerAntKernel<<<blocks_worker, thread_worker_count>>>(m, n_cities, d_tours, d_choice_info, d_selection_prob_all, d_visited, d_tour_lengths, d_distances, d_states);
         cudaDeviceSynchronize();
@@ -229,37 +229,39 @@ void worker(const std::vector<std::vector<float>>& graph, int num_iter, float al
         cudaMemcpy(choice_info_host.data(), d_choice_info, matrix_size, cudaMemcpyDeviceToHost);
         cudaMemcpy(initial_pheromone.data(), d_pheromone, matrix_size, cudaMemcpyDeviceToHost);
 
-        // Print tours
-        for (int ant = 0; ant < m; ++ant) {
-            std::cout << "Ant " << ant << " tour: ";
-            for (int step = 0; step < n_cities; ++step) {
-                std::cout << tours_host[ant * n_cities + step] << " ";
-            }
-            std::cout << " (length: " << tour_lengths_host[ant] << ")\n";
-        }
+        // // Print tours
+        // for (int ant = 0; ant < m; ++ant) {
+        //     std::cout << "Ant " << ant << " tour: ";
+        //     for (int step = 0; step < n_cities; ++step) {
+        //         std::cout << tours_host[ant * n_cities + step] << " ";
+        //     }
+        //     std::cout << " (length: " << tour_lengths_host[ant] << ")\n";
+        // }
 
-        std::cout << "Pheromone Info Matrix:\n";
-        for (int i = 0; i < n_cities; ++i) {
-            for (int j = 0; j < n_cities; ++j) {
-                std::cout << std::fixed << std::setprecision(4) << initial_pheromone[i * n_cities + j] << "\t";
-            }
-            std::cout << "\n";
-        }
+        // std::cout << "Pheromone Info Matrix:\n";
+        // for (int i = 0; i < n_cities; ++i) {
+        //     for (int j = 0; j < n_cities; ++j) {
+        //         std::cout << std::fixed << std::setprecision(4) << initial_pheromone[i * n_cities + j] << "\t";
+        //     }
+        //     std::cout << "\n";
+        // }
 
-        // Print choice_info matrix
-        std::cout << "Choice Info Matrix:\n";
-        for (int i = 0; i < n_cities; ++i) {
-            for (int j = 0; j < n_cities; ++j) {
-                std::cout << std::fixed << std::setprecision(4) << choice_info_host[i * n_cities + j] << "\t";
-            }
-            std::cout << "\n";
-        }
+        // // Print choice_info matrix
+        // std::cout << "Choice Info Matrix:\n";
+        // for (int i = 0; i < n_cities; ++i) {
+        //     for (int j = 0; j < n_cities; ++j) {
+        //         std::cout << std::fixed << std::setprecision(4) << choice_info_host[i * n_cities + j] << "\t";
+        //     }
+        //     std::cout << "\n";
+        // }
     }
 
     float best = 1e9;
+    int id = 0;
     for (int i = 0; i < m; ++i) {
         if (tour_lengths_host[i] < best) {
             best = tour_lengths_host[i];
+            id = i;
         }
     }
 
@@ -273,4 +275,8 @@ void worker(const std::vector<std::vector<float>>& graph, int num_iter, float al
     cudaFree(d_states);
 
     std::cout << "\nBest tour length: " << best << std::endl;
+
+    for (int i = 0; i < m; i++) {
+        std::cout << tours_host[i] << " ";
+    }
 }
