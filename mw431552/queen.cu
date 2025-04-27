@@ -29,7 +29,7 @@ __global__ void queenAntKernel(float *choice_info, float *distances, int *tours,
     int queen_id = blockIdx.x;
     int n_threads = blockDim.x;
 
-    int *tour = &tours[queen_id * (n_cities )];
+    int *tour = &tours[queen_id * n_cities];
     curandState localState = states[queen_id];
     
     tabu[tid] = 1; // Not visited yet
@@ -49,15 +49,24 @@ __global__ void queenAntKernel(float *choice_info, float *distances, int *tours,
 
     for (int step = 1; step < n_cities; step++) {
         probabilities[tid] = choice_info[current_city * n_cities + tid] * tabu[tid];
-
+        
         __syncthreads();
 
-        // Thread 0 does roulette wheel selection
-        double total = 0.0;
+        // Warp-level reduction to compute total probability
+        float local_prob = probabilities[tid];
+        
+        // Use warp shuffle reduction
+        for (int offset = 16; offset > 0; offset /= 2) {
+            local_prob += __shfl_down_sync(0xffffffff, local_prob, offset);
+        }
+
+        __shared__ float total;
+        if (tid % 32 == 0) { // Only one thread per warp writes
+            atomicAdd(&total, local_prob);
+        }
+        __syncthreads();
+
         if (tid == 0) {
-            for (int i = 0; i < n_cities; i++) {
-                total += probabilities[i];
-            }
             double r = curand_uniform(&localState) * total;
             double cumulative = 0.0;
             int next_city = -1;
@@ -86,11 +95,12 @@ __global__ void queenAntKernel(float *choice_info, float *distances, int *tours,
     }
 
     if (tid == 0) {
-        tour_len += distances[n_cities * queen_id + current_city];
+        tour_len += distances[current_city * n_cities + tour[0]]; // Assuming you want a full tour
         tour_lengths[queen_id] = tour_len;
         states[queen_id] = localState;
     }
 }
+
 
 void queen(const std::vector<std::vector<float>>& graph, int num_iter, float alpha, float beta, float evaporate, int seed, std::string output_file) {
     std::cout << "Running QUEEN WORKER algorithm with CUDA...\n";
