@@ -13,72 +13,159 @@
 
 #define N_MAX_THREADS_PER_BLOCK 1024
 #define N_CITIES 1024
+#define N_CURRENT_CITIES 1
 
 __global__ void queenAntKernel(float *choice_info, float *distances, int *tours, float *tour_lengths, int n_cities, curandState *states) {
-    __shared__ int tabu_list[N_CITIES];
-    __shared__ float probability_list[N_CITIES];
+    __shared__ int visited[N_CITIES];
+    __shared__ float selection_prob_all[N_CITIES];
+    __shared__ int currentcity[N_CURRENT_CITIES];
 
+    
+    
     int tid = threadIdx.x;
     int queen_id = blockIdx.x; // Each block is one queen
 
-    curandState state = states[queen_id];
-
     if (tid < n_cities) {
-        tabu_list[tid] = 1; // 1 = unvisited
-        probability_list[tid] = 0.0;
+        visited[tid] = 0; 
+        selection_prob_all[tid] = 0.0;
     }
+
     __syncthreads();
 
-    int current_city = 0;
+
+    curandState state = states[queen_id];
+    current_city = 0;
+    currentcity[0] = current_city;
+
     if (tid == 0) {
-        tabu_list[current_city] = 0; // Start at city 0
+        visited[current_city] = 1;
         tours[queen_id * n_cities + 0] = current_city;
     }
+
     __syncthreads();
 
     float tour_len = 0.0f;
+    curandState localState = states[tid];
+
 
     for (int step = 1; step < n_cities; step++) {
+        current_city = currentcity[0];
+
         if (tid < n_cities) {
-            probability_list[tid] = choice_info[current_city * n_cities + tid] * tabu_list[tid];
-        }
+            float val = choice_info[current_city * n_cities + tid];
+            if (!visited[tid]) {
+                selection_prob_all[tid] = val;
+            }
+        }        
+
         __syncthreads();
 
+        // robimy ruletkę
         if (tid == 0) {
-            float total_prob = 0.0f;
-            for (int i = 0; i < n_cities; i++) {
-                total_prob += probability_list[i];
+            float sum_probs = 0.0f;
+            for (int j = 0; j < n_cities; j++) {
+                sum_probs += selection_prob_all[j];
             }
 
-            float rand_val = curand_uniform(&state) * total_prob;
-            float cumulative = 0.0f;
-            int selected_city = -1;
-            for (int i = 0; i < n_cities; i++) {
-                cumulative += probability_list[i];
-                if (cumulative >= rand_val) {
-                    selected_city = i;
+            float r = curand_uniform(&localState) * sum_probs;
+            float cumulative_prob = 0.0f;
+            int next_city = -1;
+
+            for (int j = 0; j < n_cities; j++) {
+                cumulative_prob += selection_prob_all[j];
+                if (cumulative_prob >= r) {
+                    next_city = j;
                     break;
                 }
             }
 
-            if (selected_city == -1) selected_city = 0; // fallback
+            tours[queen_id * n_cities + step] = next_city;
+            visited[next_city] = 1;
+            tour_len += distances[current_city * n_cities + next_city];
+            
 
-            tours[queen_id * n_cities + step] = selected_city;
-            tour_len += distances[current_city * n_cities + selected_city];
-            tabu_list[selected_city] = 0;
-            current_city = selected_city;
+            current_city = next_city;
+            currentcity[0] = current_city;
         }
+
         __syncthreads();
     }
 
+    __syncthreads();
+
     if (tid == 0) {
-        // Add return to start city
         int last_city = tours[queen_id * n_cities + n_cities-1];
         int first_city = tours[queen_id * n_cities];
         tour_len += distances[last_city * n_cities + first_city];
         tour_lengths[queen_id] = tour_len;
         states[queen_id] = state;
     }
+
+    
+    // __shared__ int tabu_list[N_CITIES];
+    // __shared__ float probability_list[N_CITIES];
+
+    // int tid = threadIdx.x;
+    // int queen_id = blockIdx.x; // Each block is one queen
+
+    // curandState state = states[queen_id];
+
+    // if (tid < n_cities) {
+    //     tabu_list[tid] = 1; // 1 = unvisited
+    //     probability_list[tid] = 0.0;
+    // }
+    // __syncthreads();
+
+    // int current_city = 0;
+    // if (tid == 0) {
+    //     tabu_list[current_city] = 0; // Start at city 0
+    //     tours[queen_id * n_cities + 0] = current_city;
+    // }
+    // __syncthreads();
+
+    // float tour_len = 0.0f;
+
+    // for (int step = 1; step < n_cities; step++) {
+    //     if (tid < n_cities) {
+    //         probability_list[tid] = choice_info[current_city * n_cities + tid] * tabu_list[tid];
+    //     }
+    //     __syncthreads();
+
+    //     if (tid == 0) {
+    //         float total_prob = 0.0f;
+    //         for (int i = 0; i < n_cities; i++) {
+    //             total_prob += probability_list[i];
+    //         }
+
+    //         float rand_val = curand_uniform(&state) * total_prob;
+    //         float cumulative = 0.0f;
+    //         int selected_city = -1;
+    //         for (int i = 0; i < n_cities; i++) {
+    //             cumulative += probability_list[i];
+    //             if (cumulative >= rand_val) {
+    //                 selected_city = i;
+    //                 break;
+    //             }
+    //         }
+
+    //         if (selected_city == -1) selected_city = 0; // fallback
+
+    //         tours[queen_id * n_cities + step] = selected_city;
+    //         tour_len += distances[current_city * n_cities + selected_city];
+    //         tabu_list[selected_city] = 0;
+    //         current_city = selected_city;
+    //     }
+    //     __syncthreads();
+    // }
+
+    // if (tid == 0) {
+    //     // Add return to start city
+    //     int last_city = tours[queen_id * n_cities + n_cities-1];
+    //     int first_city = tours[queen_id * n_cities];
+    //     tour_len += distances[last_city * n_cities + first_city];
+    //     tour_lengths[queen_id] = tour_len;
+    //     states[queen_id] = state;
+    // }
 }
 
 void queen(const std::vector<std::vector<float>>& graph, int num_iter, float alpha, float beta, float evaporate, int seed, std::string output_file) {
