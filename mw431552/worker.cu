@@ -257,11 +257,11 @@ void worker(const std::vector<std::vector<float>>& graph, int num_iter, float al
     }
 
     float best = 1e9;
-    int id = 0;
+    int best_id = 0;
     for (int i = 0; i < m; ++i) {
         if (tour_lengths_host[i] < best) {
             best = tour_lengths_host[i];
-            id = i;
+            best_id = i;
         }
     }
 
@@ -276,7 +276,9 @@ void worker(const std::vector<std::vector<float>>& graph, int num_iter, float al
 
     std::cout << "\nBest tour length: " << best << std::endl;
 
-    for (int i = 0; i < m; i++) {
-        std::cout << tours_host[i] << " ";
+
+    for (int step = 0; step < n_cities; ++step) {
+        std::cout << tours_host[best_id * n_cities + step] << " ";
     }
+
 }
