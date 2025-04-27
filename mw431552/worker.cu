@@ -84,13 +84,16 @@ __global__ void workerAntKernel(
 void worker(const std::vector<std::vector<float>>& graph, int num_iter, float alpha, float beta, float evaporate, int seed, std::string output_file) {
     std::cout << "Running WORKER algorithm with CUDA...\n";
 
-    auto start_total = std::chrono::high_resolution_clock::now();
+    cudaEvent_t start_total, end_total;
+    cudaEventCreate(&start_total);
+    cudaEventCreate(&end_total);
+    cudaEventRecord(start_total);
 
-    auto total_kernel = std::chrono::duration<double>::zero();
-    auto total_pheromone = std::chrono::duration<double>::zero();
+    float total_kernel = 0.0f;
+    float total_pheromone = 0.0f;
 
     int n_cities = graph.size();
-    int m = n_cities; // number of ants = number of cities
+    int m = n_cities;
     float Q = 1.0f;
 
     size_t matrix_size = n_cities * n_cities * sizeof(float);
@@ -99,21 +102,13 @@ void worker(const std::vector<std::vector<float>>& graph, int num_iter, float al
     size_t float_array_size = m * n_cities * sizeof(float);
     size_t tour_lengths_size = m * sizeof(float);
 
-    // Host distances matrix
-    std::cout << "Host distances" << std::endl;
     std::vector<float> distances_host(n_cities * n_cities);
     for (int i = 0; i < n_cities; ++i) {
         for (int j = 0; j < n_cities; ++j) {
             distances_host[i * n_cities + j] = graph[i][j];
-            //std::cout << graph[i][j] << " ";
         }
-
-        //std::cout << std::endl;
     }
 
-    
-
-    // Device memory
     float *d_pheromone, *d_choice_info, *d_distances, *d_selection_prob_all, *d_tour_lengths;
     int *d_tours;
     bool *d_visited;
@@ -132,109 +127,67 @@ void worker(const std::vector<std::vector<float>>& graph, int num_iter, float al
     std::vector<float> initial_pheromone(n_cities * n_cities, 1.0f);
     cudaMemcpy(d_pheromone, initial_pheromone.data(), matrix_size, cudaMemcpyHostToDevice);
 
-    int n_ants = n_cities;
-
-    int thread_worker_count = min(N_MAX_THREADS_PER_BLOCK, n_ants);
-    int blocks_worker = (n_ants / thread_worker_count) + 1;
-
-    // int threads_count = n_cities;
-    // int blocks = (m + threads_count - 1) / threads_count; // enough blocks for all ants
+    int thread_worker_count = std::min(N_MAX_THREADS_PER_BLOCK, m);
+    int blocks_worker = (m + thread_worker_count - 1) / thread_worker_count;
 
     init_rng<<<blocks_worker, thread_worker_count>>>(d_states, seed);
     cudaDeviceSynchronize();
 
-    int all_threads_pheromone = n_ants * n_ants;
-    int threads_pheromone = min(N_MAX_THREADS_PER_BLOCK, all_threads_pheromone);
-    int blocks_pheromone = (all_threads_pheromone / threads_pheromone) + 1;
+    int all_threads_pheromone = m * n_cities;
+    int threads_pheromone = std::min(N_MAX_THREADS_PER_BLOCK, all_threads_pheromone);
+    int blocks_pheromone = (all_threads_pheromone + threads_pheromone - 1) / threads_pheromone;
 
-    // Host buffers to fetch data back from GPU
     std::vector<int> tours_host(m * n_cities);
     std::vector<float> choice_info_host(n_cities * n_cities);
     std::vector<float> tour_lengths_host(m);
 
+    cudaEvent_t start_kernel, end_kernel;
+    cudaEvent_t start_pheromone, end_pheromone;
+    cudaEventCreate(&start_kernel);
+    cudaEventCreate(&end_kernel);
+    cudaEventCreate(&start_pheromone);
+    cudaEventCreate(&end_pheromone);
+
     pheromoneUpdateKernel<<<blocks_pheromone, threads_pheromone>>>(
-        alpha, 
-        beta,
-        evaporate,
-        Q,
-        d_pheromone,
-        d_tours,
-        n_cities,
-        m,
-        d_choice_info,
-        d_distances,
-        d_tour_lengths
+        alpha, beta, evaporate, Q,
+        d_pheromone, d_tours, n_cities, m,
+        d_choice_info, d_distances, d_tour_lengths
     );
     cudaDeviceSynchronize();
 
     for (int iter = 0; iter < num_iter; ++iter) {
-        // std::cout << "\n=== Iteration " << iter + 1 << " ===\n";
-        auto start_kernel = std::chrono::high_resolution_clock::now();
-        workerAntKernel<<<blocks_worker, thread_worker_count>>>(m, n_cities, d_tours, d_choice_info, d_selection_prob_all, d_visited, d_tour_lengths, d_distances, d_states);
-        cudaDeviceSynchronize();
-        auto end_kernel = std::chrono::high_resolution_clock::now();
-
-        total_kernel += end_kernel - start_kernel;
-
-        auto start_kernel_pheromone = std::chrono::high_resolution_clock::now();
-        // pheromoneUpdateKernelBasic<<<blocks_worker, thread_worker_count>>>(
-        pheromoneUpdateKernel<<<blocks_pheromone, threads_pheromone>>>(
-            alpha, 
-            beta,
-            evaporate,
-            Q,
-            d_pheromone,
-            d_tours,
-            n_cities,
-            m,
-            d_choice_info,
-            d_distances,
-            d_tour_lengths
+        cudaEventRecord(start_kernel);
+        workerAntKernel<<<blocks_worker, thread_worker_count>>>(
+            m, n_cities, d_tours, d_choice_info, d_selection_prob_all,
+            d_visited, d_tour_lengths, d_distances, d_states
         );
         cudaDeviceSynchronize();
+        cudaEventRecord(end_kernel);
+        cudaEventSynchronize(end_kernel);
 
-        auto end_kernel_pheromone = std::chrono::high_resolution_clock::now();
+        float kernel_time = 0.0f;
+        cudaEventElapsedTime(&kernel_time, start_kernel, end_kernel);
+        total_kernel += kernel_time;
 
-        total_pheromone += end_kernel_pheromone - start_kernel_pheromone;
+        cudaEventRecord(start_pheromone);
+        pheromoneUpdateKernel<<<blocks_pheromone, threads_pheromone>>>(
+            alpha, beta, evaporate, Q,
+            d_pheromone, d_tours, n_cities, m,
+            d_choice_info, d_distances, d_tour_lengths
+        );
+        cudaDeviceSynchronize();
+        cudaEventRecord(end_pheromone);
+        cudaEventSynchronize(end_pheromone);
 
-        // // Copy back tours and lengths
-        // cudaMemcpy(tours_host.data(), d_tours, array_size, cudaMemcpyDeviceToHost);
-        // cudaMemcpy(tour_lengths_host.data(), d_tour_lengths, tour_lengths_size, cudaMemcpyDeviceToHost);
-        // cudaMemcpy(choice_info_host.data(), d_choice_info, matrix_size, cudaMemcpyDeviceToHost);
-        // cudaMemcpy(initial_pheromone.data(), d_pheromone, matrix_size, cudaMemcpyDeviceToHost);
-
-        // // Print tours
-        // for (int ant = 0; ant < m; ++ant) {
-        //     std::cout << "Ant " << ant << " tour: ";
-        //     for (int step = 0; step < n_cities; ++step) {
-        //         std::cout << tours_host[ant * n_cities + step] << " ";
-        //     }
-        //     std::cout << " (length: " << tour_lengths_host[ant] << ")\n";
-        // }
-
-        // std::cout << "Pheromone Info Matrix:\n";
-        // for (int i = 0; i < n_cities; ++i) {
-        //     for (int j = 0; j < n_cities; ++j) {
-        //         std::cout << std::fixed << std::setprecision(4) << initial_pheromone[i * n_cities + j] << "\t";
-        //     }
-        //     std::cout << "\n";
-        // }
-
-        // // Print choice_info matrix
-        // std::cout << "Choice Info Matrix:\n";
-        // for (int i = 0; i < n_cities; ++i) {
-        //     for (int j = 0; j < n_cities; ++j) {
-        //         std::cout << std::fixed << std::setprecision(4) << choice_info_host[i * n_cities + j] << "\t";
-        //     }
-        //     std::cout << "\n";
-        // }
+        float pheromone_time = 0.0f;
+        cudaEventElapsedTime(&pheromone_time, start_pheromone, end_pheromone);
+        total_pheromone += pheromone_time;
     }
 
     cudaMemcpy(tours_host.data(), d_tours, array_size, cudaMemcpyDeviceToHost);
     cudaMemcpy(tour_lengths_host.data(), d_tour_lengths, tour_lengths_size, cudaMemcpyDeviceToHost);
     cudaMemcpy(choice_info_host.data(), d_choice_info, matrix_size, cudaMemcpyDeviceToHost);
     cudaMemcpy(initial_pheromone.data(), d_pheromone, matrix_size, cudaMemcpyDeviceToHost);
-
 
     float best = 1e9;
     int best_id = 0;
@@ -254,13 +207,22 @@ void worker(const std::vector<std::vector<float>>& graph, int num_iter, float al
     cudaFree(d_tour_lengths);
     cudaFree(d_states);
 
-    auto end_total = std::chrono::high_resolution_clock::now(); // End total timer
-    std::chrono::duration<double> total_duration = end_total - start_total;
+    cudaEventRecord(end_total);
+    cudaEventSynchronize(end_total);
 
-    std::cout << "Total kernel time: " << total_kernel.count() << std::endl;
-    std::cout << "Total kernel pheromone time: " << total_pheromone.count() << std::endl;
-    std::cout << "Total time: " << total_duration.count() << std::endl;
+    float total_time = 0.0f;
+    cudaEventElapsedTime(&total_time, start_total, end_total);
 
+    std::cout << "Total kernel time: " << total_kernel / 1000.0f << " s" << std::endl;
+    std::cout << "Total kernel pheromone time: " << total_pheromone / 1000.0f << " s" << std::endl;
+    std::cout << "Total time: " << total_time / 1000.0f << " s" << std::endl;
+
+    cudaEventDestroy(start_total);
+    cudaEventDestroy(end_total);
+    cudaEventDestroy(start_kernel);
+    cudaEventDestroy(end_kernel);
+    cudaEventDestroy(start_pheromone);
+    cudaEventDestroy(end_pheromone);
 
     std::string output_path = prepare_output_path(output_file);
     std::ofstream out(output_path);
@@ -270,18 +232,15 @@ void worker(const std::vector<std::vector<float>>& graph, int num_iter, float al
         return;
     }
 
-    // Assume `best` and `best_id` are already calculated, and `tours_host` is available.
     std::cout << "\nBest tour length: " << best << std::endl;
     out << "Best tour length: " << best << std::endl;
 
     for (int step = 0; step < n_cities; ++step) {
         std::cout << tours_host[best_id * n_cities + step] << " ";
-        out << tours_host[best_id * n_cities + step] << " ";
+        out << tours_host[best_id * n_cities + step] + 1 << " ";
     }
     std::cout << std::endl;
     out << std::endl;
 
-    out.close(); 
-
-
+    out.close();
 }
