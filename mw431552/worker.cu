@@ -197,6 +197,7 @@ void worker(const std::vector<std::vector<float>>& graph, int num_iter, float al
 
     auto total_kernel = std::chrono::duration<double>::zero();
     auto total_pheromone = std::chrono::duration<double>::zero();
+
     int n_cities = graph.size();
     int m = n_cities; // number of ants = number of cities
     float Q = 1.0f;
@@ -287,42 +288,42 @@ void worker(const std::vector<std::vector<float>>& graph, int num_iter, float al
         total_pheromone += end_kernel_pheromone - start_kernel_pheromone;
 
         // Copy back tours and lengths
-        // cudaMemcpy(tours_host.data(), d_tours, array_size, cudaMemcpyDeviceToHost);
-        // cudaMemcpy(tour_lengths_host.data(), d_tour_lengths, tour_lengths_size, cudaMemcpyDeviceToHost);
-        // cudaMemcpy(choice_info_host.data(), d_choice_info, matrix_size, cudaMemcpyDeviceToHost);
-        // cudaMemcpy(initial_pheromone.data(), d_pheromone, matrix_size, cudaMemcpyDeviceToHost);
+        cudaMemcpy(tours_host.data(), d_tours, array_size, cudaMemcpyDeviceToHost);
+        cudaMemcpy(tour_lengths_host.data(), d_tour_lengths, tour_lengths_size, cudaMemcpyDeviceToHost);
+        cudaMemcpy(choice_info_host.data(), d_choice_info, matrix_size, cudaMemcpyDeviceToHost);
+        cudaMemcpy(initial_pheromone.data(), d_pheromone, matrix_size, cudaMemcpyDeviceToHost);
 
-        // // Print tours
-        // for (int ant = 0; ant < m; ++ant) {
-        //     std::cout << "Ant " << ant << " tour: ";
-        //     for (int step = 0; step < n_cities; ++step) {
-        //         std::cout << tours_host[ant * n_cities + step] << " ";
-        //     }
-        //     std::cout << " (length: " << tour_lengths_host[ant] << ")\n";
-        // }
+        // Print tours
+        for (int ant = 0; ant < m; ++ant) {
+            std::cout << "Ant " << ant << " tour: ";
+            for (int step = 0; step < n_cities; ++step) {
+                std::cout << tours_host[ant * n_cities + step] << " ";
+            }
+            std::cout << " (length: " << tour_lengths_host[ant] << ")\n";
+        }
 
-        // std::cout << "Pheromone Info Matrix:\n";
-        // for (int i = 0; i < n_cities; ++i) {
-        //     for (int j = 0; j < n_cities; ++j) {
-        //         std::cout << std::fixed << std::setprecision(4) << initial_pheromone[i * n_cities + j] << "\t";
-        //     }
-        //     std::cout << "\n";
-        // }
+        std::cout << "Pheromone Info Matrix:\n";
+        for (int i = 0; i < n_cities; ++i) {
+            for (int j = 0; j < n_cities; ++j) {
+                std::cout << std::fixed << std::setprecision(4) << initial_pheromone[i * n_cities + j] << "\t";
+            }
+            std::cout << "\n";
+        }
 
-        // // Print choice_info matrix
-        // std::cout << "Choice Info Matrix:\n";
-        // for (int i = 0; i < n_cities; ++i) {
-        //     for (int j = 0; j < n_cities; ++j) {
-        //         std::cout << std::fixed << std::setprecision(4) << choice_info_host[i * n_cities + j] << "\t";
-        //     }
-        //     std::cout << "\n";
-        // }
+        // Print choice_info matrix
+        std::cout << "Choice Info Matrix:\n";
+        for (int i = 0; i < n_cities; ++i) {
+            for (int j = 0; j < n_cities; ++j) {
+                std::cout << std::fixed << std::setprecision(4) << choice_info_host[i * n_cities + j] << "\t";
+            }
+            std::cout << "\n";
+        }
     }
 
-    cudaMemcpy(tours_host.data(), d_tours, array_size, cudaMemcpyDeviceToHost);
-    cudaMemcpy(tour_lengths_host.data(), d_tour_lengths, tour_lengths_size, cudaMemcpyDeviceToHost);
-    cudaMemcpy(choice_info_host.data(), d_choice_info, matrix_size, cudaMemcpyDeviceToHost);
-    cudaMemcpy(initial_pheromone.data(), d_pheromone, matrix_size, cudaMemcpyDeviceToHost);
+    // cudaMemcpy(tours_host.data(), d_tours, array_size, cudaMemcpyDeviceToHost);
+    // cudaMemcpy(tour_lengths_host.data(), d_tour_lengths, tour_lengths_size, cudaMemcpyDeviceToHost);
+    // cudaMemcpy(choice_info_host.data(), d_choice_info, matrix_size, cudaMemcpyDeviceToHost);
+    // cudaMemcpy(initial_pheromone.data(), d_pheromone, matrix_size, cudaMemcpyDeviceToHost);
 
 
     float best = 1e9;
