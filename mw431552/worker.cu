@@ -105,10 +105,10 @@ void worker(const std::vector<std::vector<float>>& graph, int num_iter, float al
     for (int i = 0; i < n_cities; ++i) {
         for (int j = 0; j < n_cities; ++j) {
             distances_host[i * n_cities + j] = graph[i][j];
-            std::cout << graph[i][j] << " ";
+            //std::cout << graph[i][j] << " ";
         }
 
-        std::cout << std::endl;
+        //std::cout << std::endl;
     }
 
     
@@ -182,20 +182,20 @@ void worker(const std::vector<std::vector<float>>& graph, int num_iter, float al
 
         total_pheromone += end_kernel_pheromone - start_kernel_pheromone;
 
-        // // Copy back tours and lengths
-        // cudaMemcpy(tours_host.data(), d_tours, array_size, cudaMemcpyDeviceToHost);
-        // cudaMemcpy(tour_lengths_host.data(), d_tour_lengths, tour_lengths_size, cudaMemcpyDeviceToHost);
-        // cudaMemcpy(choice_info_host.data(), d_choice_info, matrix_size, cudaMemcpyDeviceToHost);
-        // cudaMemcpy(initial_pheromone.data(), d_pheromone, matrix_size, cudaMemcpyDeviceToHost);
+        // Copy back tours and lengths
+        cudaMemcpy(tours_host.data(), d_tours, array_size, cudaMemcpyDeviceToHost);
+        cudaMemcpy(tour_lengths_host.data(), d_tour_lengths, tour_lengths_size, cudaMemcpyDeviceToHost);
+        cudaMemcpy(choice_info_host.data(), d_choice_info, matrix_size, cudaMemcpyDeviceToHost);
+        cudaMemcpy(initial_pheromone.data(), d_pheromone, matrix_size, cudaMemcpyDeviceToHost);
 
-        // // Print tours
-        // for (int ant = 0; ant < m; ++ant) {
-        //     std::cout << "Ant " << ant << " tour: ";
-        //     for (int step = 0; step < n_cities; ++step) {
-        //         std::cout << tours_host[ant * n_cities + step] << " ";
-        //     }
-        //     std::cout << " (length: " << tour_lengths_host[ant] << ")\n";
-        // }
+        // Print tours
+        for (int ant = 0; ant < m; ++ant) {
+            std::cout << "Ant " << ant << " tour: ";
+            for (int step = 0; step < n_cities; ++step) {
+                std::cout << tours_host[ant * n_cities + step] << " ";
+            }
+            std::cout << " (length: " << tour_lengths_host[ant] << ")\n";
+        }
 
         // std::cout << "Pheromone Info Matrix:\n";
         // for (int i = 0; i < n_cities; ++i) {
