@@ -73,8 +73,8 @@ __global__ void queenAntKernel(float *choice_info, float *distances, int *tours,
 
     if (tid == 0) {
         // Add return to start city
-        int last_city = tours[queen_id * n_cities + n_cities-1]
-        int first_city = tours[queen_id * n_cities]
+        int last_city = tours[queen_id * n_cities + n_cities-1];
+        int first_city = tours[queen_id * n_cities];
         tour_len += distances[last_city * n_cities + first_city];
         tour_lengths[queen_id] = tour_len;
         states[queen_id] = state;
