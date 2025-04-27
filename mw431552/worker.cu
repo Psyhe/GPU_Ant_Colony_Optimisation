@@ -7,6 +7,7 @@
 #include <string>
 #include <algorithm>
 #include <iomanip> // for better formatting
+#include <fstream>
 
 #define N_MAX_THREADS_PER_BLOCK 1024
 
@@ -85,7 +86,7 @@ __global__ void workerAntKernel(
     }
 
     int step = 0;
-    int current_city = 0;
+    int current_city = 1;
     tours[offset + step] = current_city;
     visited[offset + current_city] = true;
     float tour_len = 0.0f;
@@ -274,11 +275,26 @@ void worker(const std::vector<std::vector<float>>& graph, int num_iter, float al
     cudaFree(d_tour_lengths);
     cudaFree(d_states);
 
-    std::cout << "\nBest tour length: " << best << std::endl;
+    std::string output_path = prepare_output_path(output_file);
+    std::ofstream out(output_path);
 
+    if (!out.is_open()) {
+        std::cerr << "Failed to open output file: " << output_path << std::endl;
+        return;
+    }
+
+    // Assume `best` and `best_id` are already calculated, and `tours_host` is available.
+    std::cout << "\nBest tour length: " << best << std::endl;
+    out << "Best tour length: " << best << std::endl;
 
     for (int step = 0; step < n_cities; ++step) {
         std::cout << tours_host[best_id * n_cities + step] << " ";
+        out << tours_host[best_id * n_cities + step] << " ";
     }
+    std::cout << std::endl;
+    out << std::endl;
+
+    out.close(); 
+
 
 }
