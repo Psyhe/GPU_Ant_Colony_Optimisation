@@ -271,7 +271,7 @@ void queen(const std::vector<std::vector<float>>& graph, int num_iter, float alp
         cudaMemcpy(choice_info_host.data(), d_choice_info, matrix_size, cudaMemcpyDeviceToHost);
         cudaMemcpy(initial_pheromone.data(), d_pheromone, matrix_size, cudaMemcpyDeviceToHost);
 
-        Print tours
+        // Print tours
         for (int queen = 0; queen < m; ++queen) {
             std::cout << "Queen " << queen << " tour: ";
             for (int step = 0; step < n_cities; ++step) {
