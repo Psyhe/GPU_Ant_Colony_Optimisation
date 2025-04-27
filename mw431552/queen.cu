@@ -139,6 +139,9 @@ void queen(const std::vector<std::vector<float>>& graph, int num_iter, float alp
     std::vector<float> initial_pheromone(n_cities * n_cities, 1.0f);
     cudaMemcpy(d_pheromone, initial_pheromone.data(), matrix_size, cudaMemcpyHostToDevice);
 
+    std::vector<float> initial_choice_info(n_cities * n_cities, 1.0f);
+    cudaMemcpy(d_choice_info, initial_choice_info.data(), matrix_size, cudaMemcpyHostToDevice);
+
     int thread_queen_count = std::min(N_MAX_THREADS_PER_BLOCK, n_cities);
     int blocks_queen = std::min(N_MAX_THREADS_PER_BLOCK, n_cities);
 
@@ -153,20 +156,6 @@ void queen(const std::vector<std::vector<float>>& graph, int num_iter, float alp
     std::vector<float> tour_lengths_host(m);
     std::vector<float> choice_info_host(n_cities * n_cities);
 
-    pheromoneUpdateKernel<<<blocks_pheromone, threads_pheromone>>>(
-        alpha, 
-        beta,
-        evaporate,
-        Q,
-        d_pheromone,
-        d_tours,
-        n_cities,
-        m,
-        d_choice_info,
-        d_distances,
-        d_tour_lengths
-    );
-    cudaDeviceSynchronize();
 
     for (int iter = 0; iter < num_iter; ++iter) {
         auto start_kernel = std::chrono::high_resolution_clock::now();
