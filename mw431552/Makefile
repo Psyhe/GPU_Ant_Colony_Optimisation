@@ -1,5 +1,5 @@
 TARGET = acotsp
-SRCS = main.cpp worker.cu queen.cu algorithm.cpp graph.cpp
+SRCS = main.cpp worker.cu queen.cu algorithm.cpp graph.cpp utils.cu
 CUDA_FLAGS = -O2 -std=c++17
 LIBS = -lcuda -lcurand
 

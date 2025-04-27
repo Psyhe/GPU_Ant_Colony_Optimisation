@@ -9,14 +9,10 @@
 #include <iomanip> // for better formatting
 #include <fstream>
 #include <chrono>
+#include "utils.h"
 
 #define N_MAX_THREADS_PER_BLOCK 1024
 #define N_CITIES 1024
-
-__global__ void init_rng(curandState* states, unsigned long seed) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    curand_init(seed, idx, 0, &states[idx]);
-}
 
 __global__ void queenAntKernel(float *choice_info, float *distances, int *tours, float *tour_lengths, int n_cities, curandState *states) {
     __shared__ int tabu_list[N_CITIES];
@@ -82,14 +78,6 @@ __global__ void queenAntKernel(float *choice_info, float *distances, int *tours,
     }
 
     states[queen_id] = state;
-}
-
-std::string prepare_output_path(const std::string& output_file) {
-    if (output_file.find('/') == std::string::npos && output_file.find('\\') == std::string::npos) {
-        return "./" + output_file;
-    } else {
-        return output_file;
-    }
 }
 
 
@@ -185,7 +173,7 @@ void queen(const std::vector<std::vector<float>>& graph, int num_iter, float alp
     cudaMemcpy(d_pheromone, initial_pheromone.data(), matrix_size, cudaMemcpyHostToDevice);
 
     int thread_queen_count = std::min(N_MAX_THREADS_PER_BLOCK, n_cities);
-    int blocks_queen = (n_cities + thread_queen_count - 1) / thread_queen_count;
+    int blocks_queen = std::min(N_MAX_THREADS_PER_BLOCK, n_cities);
 
     init_rng<<<blocks_queen, thread_queen_count>>>(d_states, seed);
     cudaDeviceSynchronize();
