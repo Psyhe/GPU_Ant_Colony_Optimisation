@@ -119,10 +119,11 @@ void queen(const std::vector<std::vector<float>>& graph, int num_iter, float alp
     for (int i = 0; i < n_cities; ++i) {
         for (int j = 0; j < n_cities; ++j) {
             distances_host[i * n_cities + j] = graph[i][j];
-            // std::cout << graph[i][j] << " ";
+            std::cout << graph[i][j] << " ";
         }
-        // std::cout << std::endl;
+        std::cout << std::endl;
     }
+    std::cout << "N cities: " << n_cities << std::endl;
 
     // Device memory
     float *d_pheromone, *d_choice_info, *d_distances, *d_tour_lengths;
