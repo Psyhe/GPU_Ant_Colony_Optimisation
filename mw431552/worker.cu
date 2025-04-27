@@ -81,14 +81,6 @@ __global__ void workerAntKernel(
     states[tid] = localState;
 }
 
-std::string prepare_output_path(const std::string& output_file) {
-    if (output_file.find('/') == std::string::npos && output_file.find('\\') == std::string::npos) {
-        return "./" + output_file;
-    } else {
-        return output_file;
-    }
-}
-
 void worker(const std::vector<std::vector<float>>& graph, int num_iter, float alpha, float beta, float evaporate, int seed, std::string output_file) {
     std::cout << "Running WORKER algorithm with CUDA...\n";
 
