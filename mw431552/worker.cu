@@ -123,6 +123,10 @@ __global__ void workerAntKernel(
         step++;
     }
 
+    for (int i = 0; i < n_cities; i++) {
+        cout << tours[offset + i] << " ";
+    }
+
     tour_len += distances[current_city * n_cities + tours[offset]];
     tour_lengths[tid] = tour_len;
 
@@ -278,7 +282,7 @@ void worker(const std::vector<std::vector<float>>& graph, int num_iter, float al
     cudaMemcpy(d_distances, distances_host.data(), matrix_size, cudaMemcpyHostToDevice);
     std::vector<float> initial_pheromone(n_cities * n_cities, 1.0f);
     cudaMemcpy(d_pheromone, initial_pheromone.data(), matrix_size, cudaMemcpyHostToDevice);
-    
+
     int threads_count = n_cities;
     int blocks = (m + threads_count - 1) / threads_count; // enough blocks for all ants
 
