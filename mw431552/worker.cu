@@ -184,7 +184,7 @@ void worker(const std::vector<std::vector<float>>& graph, int num_iter, float al
 
     int n_ants = n_cities;
 
-    int thread_worker_count = min(N_MAX_THREADS_PER_BLOCK, n_ants)
+    int thread_worker_count = min(N_MAX_THREADS_PER_BLOCK, n_ants);
     int blocks_worker = (n_ants / thread_worker_count) + 1;
 
     // int threads_count = n_cities;
