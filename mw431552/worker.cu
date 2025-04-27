@@ -195,9 +195,8 @@ void worker(const std::vector<std::vector<float>>& graph, int num_iter, float al
 
     auto start_total = std::chrono::high_resolution_clock::now();
 
-    std::chrono::duration<double> total_kernel = 0.0;
-    std::chrono::duration<double> total_pheromone = 0.0;
-
+    auto total_kernel = std::chrono::duration<double>::zero();
+    auto total_pheromone = std::chrono::duration<double>::zero();
     int n_cities = graph.size();
     int m = n_cities; // number of ants = number of cities
     float Q = 1.0f;
