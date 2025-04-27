@@ -136,6 +136,21 @@ void queen(const std::vector<std::vector<float>>& graph, int num_iter, float alp
     std::vector<float> tour_lengths_host(m);
     std::vector<float> choice_info_host(n_cities * n_cities);
 
+    pheromoneUpdateKernel<<<blocks_pheromone, threads_pheromone>>>(
+        alpha, 
+        beta,
+        evaporate,
+        Q,
+        d_pheromone,
+        d_tours,
+        n_cities,
+        m,
+        d_choice_info,
+        d_distances,
+        d_tour_lengths
+    );
+    cudaDeviceSynchronize();
+
     for (int iter = 0; iter < num_iter; ++iter) {
         auto start_kernel = std::chrono::high_resolution_clock::now();
         queenAntKernel<<<m, n_cities>>>(d_choice_info, d_distances, d_tours, d_tour_lengths, n_cities, d_states);
