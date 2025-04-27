@@ -17,9 +17,9 @@
 
 __global__ void queenAntKernel(float *choice_info, float *distances, int *tours, float *tour_lengths, int n_cities, curandState *states) {
 
-    _shared_ int tabu[MAX_CITIES];
-    _shared_ float probabilities[MAX_CITIES];
-    _shared_ int current_city;
+    __shared__ int tabu[MAX_CITIES];
+    __shared__ float probabilities[MAX_CITIES];
+    __shared__ int current_city;
     
     int tid = threadIdx.x;
     
@@ -79,14 +79,14 @@ __global__ void queenAntKernel(float *choice_info, float *distances, int *tours,
             }
             tour[step] = next_city;
             tabu[next_city] = 0; // mark as visited
-            tour_len += dist[current_city * n_cities + next_city];
+            tour_len += distances[current_city * n_cities + next_city];
             current_city = next_city;
         }
         __syncthreads();
     }
 
     if (tid == 0) {
-        tour_len += dist[n_cities * queen_id + current_city]
+        tour_len += distances[n_cities * queen_id + current_city];
         tour_lengths[queen_id] = tour_len;
         states[queen_id] = localState;
     }
