@@ -32,7 +32,7 @@ __global__ void pheromoneUpdateKernelBasic(
         pheromone[tid * n_cities + i] *= (1.0f - evaporation_rate);
     }
 
-    tour_len = tour_lengths[tid];
+    float tour_len = tour_lengths[tid];
 
     for (int i = 0; i < n_cities-1; i++) {
         int current_city = tours[tid * n_cities + i];
@@ -347,9 +347,9 @@ void worker(const std::vector<std::vector<float>>& graph, int num_iter, float al
     auto end_total = std::chrono::high_resolution_clock::now(); // End total timer
     std::chrono::duration<double> total_duration = end_total - start_total;
 
-    std::cout << "Total kernel time: " << total_kernel << endl;
-    std::cout << "Total kernel pheromone time: " << total_kernel_pheromone << endl;
-    std::cout << "Total time: " << total_duration << endl;
+    std::cout << "Total kernel time: " << total_kernel << std::endl;
+    std::cout << "Total kernel pheromone time: " << total_kernel_pheromone << std::endl;
+    std::cout << "Total time: " << total_duration << std::endl;
 
 
     std::string output_path = prepare_output_path(output_file);
