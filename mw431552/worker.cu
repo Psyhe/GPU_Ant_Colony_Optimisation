@@ -11,6 +11,8 @@
 #include <chrono>
 #include "utils.h"
 
+#define N_MAX_THREADS_PER_BLOCK 1024
+
 __global__ void workerAntKernel(
     int m, int n_cities,
     int* tours,
