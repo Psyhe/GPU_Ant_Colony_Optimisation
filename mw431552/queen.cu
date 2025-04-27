@@ -24,8 +24,8 @@ __global__ void queenAntKernel(float *choice_info, float *distances, int *tours,
     int queen_id = blockIdx.x; // Each block is one queen
 
     if (tid < n_cities) {
-        visited[tid] = 0; 
-        selection_prob_all[tid] = 0.0f;
+        // visited[tid] = 0; 
+        // selection_prob_all[tid] = 0.0f;
 
         tours[tid] = 15;
     }
