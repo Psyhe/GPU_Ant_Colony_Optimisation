@@ -11,6 +11,54 @@
 
 #define N_MAX_THREADS_PER_BLOCK 1024
 
+__global__ void pheromoneUpdateKernelBasic(
+    float alpha,
+    float beta,
+    float evaporation_rate,
+    float Q,
+    float *pheromone,
+    int *tours,
+    int n_cities,
+    int m,
+    float *choice_info,
+    float *distances,
+    float *tour_lengths
+) {
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid >= m) return;
+
+    for (int i = 0; i < n_cities; i++) {
+        pheromone[tid * n_cities + i] *= (1.0f - evaporation_rate);
+    }
+
+    tour_len = tour_lengths[tid];
+
+    for (int i = 0; i < n_cities-1; i++) {
+        int current_city = tours[tid * n_cities + i];
+        int next_city = tours[tid * n_cities + i + 1];
+
+        pheromone[next_city * n_cities + current_city] += Q / tour_len;
+        pheromone[current_city * n_cities + next_city] += Q / tour_len;
+    }
+
+    // Add return to starting city
+    int current_city = tours[tid * n_cities + n_cities-1];
+    int start_city = tours[tid * n_cities];
+
+    pheromone[current_city * n_cities + start_city] += Q / tour_len;
+    pheromone[start_city * n_cities + current_city] += Q / tour_len;
+
+    
+    // wszystkie watki musza zostawic swoje feromony
+    __syncthreads();
+
+    for (int i = 0; i < n_cities; i++) {
+        float tau = __powf(pheromone[tid * n_cities + i], alpha);
+        float eta = __powf(1.0f / distances[tid * n_cities + i], beta);
+        choice_info[tid * n_cities + i] = tau * eta;
+    }
+}
+
 
 __global__ void pheromoneUpdateKernel(
     float alpha,
@@ -209,7 +257,8 @@ void worker(const std::vector<std::vector<float>>& graph, int num_iter, float al
         workerAntKernel<<<blocks_worker, thread_worker_count>>>(m, n_cities, d_tours, d_choice_info, d_selection_prob_all, d_visited, d_tour_lengths, d_distances, d_states);
         cudaDeviceSynchronize();
 
-        pheromoneUpdateKernel<<<blocks_pheromone, threads_pheromone>>>(
+        pheromoneUpdateKernelBasic<<<blocks_worker, thread_worker_count>>>(
+        // pheromoneUpdateKernel<<<blocks_pheromone, threads_pheromone>>>(
             alpha, 
             beta,
             evaporate,
