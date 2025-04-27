@@ -30,72 +30,72 @@ __global__ void queenAntKernel(float *choice_info, float *distances, int *tours,
         tours[tid] = 15;
     }
 
-    __syncthreads();
+    // __syncthreads();
 
-    curandState state = states[queen_id]; // << only one RNG per queen
-    int current_city = 1;
-    currentcity[0] = current_city;
+    // curandState state = states[queen_id]; // << only one RNG per queen
+    // int current_city = 1;
+    // currentcity[0] = current_city;
 
-    if (tid == 0) {
-        visited[current_city] = 1;
-        tours[queen_id * n_cities + 0] = current_city;
-    }
+    // if (tid == 0) {
+    //     visited[current_city] = 1;
+    //     tours[queen_id * n_cities + 0] = current_city;
+    // }
 
-    __syncthreads();
+    // __syncthreads();
 
-    float tour_len = 0.0f;
+    // float tour_len = 0.0f;
 
-    for (int step = 1; step < n_cities; step++) {
-        current_city = currentcity[0];
+    // for (int step = 1; step < n_cities; step++) {
+    //     current_city = currentcity[0];
 
-        if (tid < n_cities) {
-            float val = choice_info[current_city * n_cities + tid];
-            if (!visited[tid]) {
-                selection_prob_all[tid] = val;
-            } else {
-                selection_prob_all[tid] = 0.0f;
-            }
-        }        
+    //     if (tid < n_cities) {
+    //         float val = choice_info[current_city * n_cities + tid];
+    //         if (!visited[tid]) {
+    //             selection_prob_all[tid] = val;
+    //         } else {
+    //             selection_prob_all[tid] = 0.0f;
+    //         }
+    //     }        
 
-        __syncthreads();
+    //     __syncthreads();
 
-        if (tid == 0) {
-            float sum_probs = 0.0f;
-            for (int j = 0; j < n_cities; j++) {
-                sum_probs += selection_prob_all[j];
-            }
+    //     if (tid == 0) {
+    //         float sum_probs = 0.0f;
+    //         for (int j = 0; j < n_cities; j++) {
+    //             sum_probs += selection_prob_all[j];
+    //         }
 
-            float r = curand_uniform(&state) * sum_probs; // <-- use correct RNG
-            float cumulative_prob = 0.0f;
-            int next_city = -1;
+    //         float r = curand_uniform(&state) * sum_probs; // <-- use correct RNG
+    //         float cumulative_prob = 0.0f;
+    //         int next_city = -1;
 
-            for (int j = 0; j < n_cities; j++) {
-                cumulative_prob += selection_prob_all[j];
-                if (cumulative_prob >= r) {
-                    next_city = j;
-                    break;
-                }
-            }
+    //         for (int j = 0; j < n_cities; j++) {
+    //             cumulative_prob += selection_prob_all[j];
+    //             if (cumulative_prob >= r) {
+    //                 next_city = j;
+    //                 break;
+    //             }
+    //         }
 
-            if (next_city == -1) next_city = 0; // Safety
+    //         if (next_city == -1) next_city = 0; // Safety
 
-            tours[queen_id * n_cities + step] = next_city;
-            visited[next_city] = 1;
-            tour_len += distances[current_city * n_cities + next_city];
+    //         tours[queen_id * n_cities + step] = next_city;
+    //         visited[next_city] = 1;
+    //         tour_len += distances[current_city * n_cities + next_city];
 
-            currentcity[0] = next_city;
-        }
+    //         currentcity[0] = next_city;
+    //     }
 
-        __syncthreads();
-    }
+    //     __syncthreads();
+    // }
 
-    if (tid == 0) {
-        int last_city = tours[queen_id * n_cities + n_cities-1];
-        int first_city = tours[queen_id * n_cities];
-        tour_len += distances[last_city * n_cities + first_city];
-        tour_lengths[queen_id] = tour_len;
-        states[queen_id] = state; // save back the updated RNG
-    }
+    // if (tid == 0) {
+    //     int last_city = tours[queen_id * n_cities + n_cities-1];
+    //     int first_city = tours[queen_id * n_cities];
+    //     tour_len += distances[last_city * n_cities + first_city];
+    //     tour_lengths[queen_id] = tour_len;
+    //     states[queen_id] = state; // save back the updated RNG
+    // }
 }
 
 void queen(const std::vector<std::vector<float>>& graph, int num_iter, float alpha, float beta, float evaporate, int seed, std::string output_file) {
