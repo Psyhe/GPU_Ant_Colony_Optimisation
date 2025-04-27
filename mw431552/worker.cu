@@ -5,7 +5,10 @@
 #include <fstream>
 #include <vector>
 #include <string>
+#include <algorithm>
 #include <iomanip> // for better formatting
+
+#define N_MAX_THREADS_PER_BLOCK 1024
 
 
 __global__ void pheromoneUpdateKernel(
@@ -179,13 +182,20 @@ void worker(const std::vector<std::vector<float>>& graph, int num_iter, float al
     std::vector<float> initial_pheromone(n_cities * n_cities, 1.0f);
     cudaMemcpy(d_pheromone, initial_pheromone.data(), matrix_size, cudaMemcpyHostToDevice);
 
-    int threads_count = n_cities;
-    int blocks = (m + threads_count - 1) / threads_count; // enough blocks for all ants
+    int n_ants = n_cities;
 
-    init_rng<<<blocks, threads_count>>>(d_states, seed);
+    int thread_worker_count = min(N_MAX_THREADS_PER_BLOCK, n_ants)
+    int blocks_worker = (n_ants / thread_worker_count) + 1;
+
+    // int threads_count = n_cities;
+    // int blocks = (m + threads_count - 1) / threads_count; // enough blocks for all ants
+
+    init_rng<<<blocks_worker, thread_worker_count>>>(d_states, seed);
     cudaDeviceSynchronize();
 
-    int threads_pheromone = threads_count * threads_count;
+    int all_threads_pheromone = n_ants * n_ants;
+    int threads_pheromone = min(N_MAX_THREADS_PER_BLOCK, all_threads_pheromone);
+    int blocks_pheromone = (all_threads_pheromone / threads_pheromone) + 1;
 
     // Host buffers to fetch data back from GPU
     std::vector<int> tours_host(m * n_cities);
@@ -195,10 +205,10 @@ void worker(const std::vector<std::vector<float>>& graph, int num_iter, float al
     for (int iter = 0; iter < num_iter; ++iter) {
         std::cout << "\n=== Iteration " << iter + 1 << " ===\n";
 
-        workerAntKernel<<<blocks, threads_count>>>(m, n_cities, d_tours, d_choice_info, d_selection_prob_all, d_visited, d_tour_lengths, d_distances, d_states);
+        workerAntKernel<<<blocks_worker, thread_worker_count>>>(m, n_cities, d_tours, d_choice_info, d_selection_prob_all, d_visited, d_tour_lengths, d_distances, d_states);
         cudaDeviceSynchronize();
 
-        pheromoneUpdateKernel<<<blocks, threads_pheromone>>>(
+        pheromoneUpdateKernel<<<blocks_pheromone, threads_pheromone>>>(
             alpha, 
             beta,
             evaporate,
