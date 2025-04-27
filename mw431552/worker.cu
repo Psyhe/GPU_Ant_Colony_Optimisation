@@ -137,106 +137,6 @@ std::string prepare_output_path(const std::string& output_file) {
     }
 }
 
-// void worker(const std::vector<std::vector<float>>& graph, int num_iter, float alpha, float beta, float evaporate, int seed, std::string output_file) {
-//     std::cout << "Running WORKER algorithm with CUDA...\n";
-
-//     int n_cities = graph.size();
-//     int m = n_cities; // number of ants = number of cities
-//     float Q = 1.0f;
-
-//     size_t matrix_size = n_cities * n_cities * sizeof(float);
-//     size_t array_size = m * n_cities * sizeof(int);
-//     size_t bool_array_size = m * n_cities * sizeof(bool);
-//     size_t float_array_size = m * n_cities * sizeof(float);
-//     size_t tour_lengths_size = m * sizeof(float);
-
-//     // Host distances matrix
-//     std::vector<float> distances_host(n_cities * n_cities);
-//     for (int i = 0; i < n_cities; ++i) {
-//         for (int j = 0; j < n_cities; ++j) {
-//             distances_host[i * n_cities + j] = graph[i][j];
-//         }
-//     }
-
-//     // Device memory
-//     float *d_pheromone, *d_choice_info, *d_distances, *d_selection_prob_all, *d_tour_lengths;
-//     int *d_tours;
-//     bool *d_visited;
-//     curandState* d_states;
-
-//     cudaMalloc(&d_pheromone, matrix_size);
-//     cudaMalloc(&d_choice_info, matrix_size);
-//     cudaMalloc(&d_distances, matrix_size);
-//     cudaMalloc(&d_tours, array_size);
-//     cudaMalloc(&d_selection_prob_all, float_array_size);
-//     cudaMalloc(&d_visited, bool_array_size);
-//     cudaMalloc(&d_tour_lengths, tour_lengths_size);
-//     cudaMalloc(&d_states, m * sizeof(curandState));
-
-//     cudaMemcpy(d_distances, distances_host.data(), matrix_size, cudaMemcpyHostToDevice);
-//     cudaMemset(d_pheromone, 0, matrix_size);
-
-//     int blocks = 1;
-//     int threads_count = n_cities
-
-//     init_rng<<<1, n_cities>>>(d_states, seed);
-//     cudaDeviceSynchronize();
-
-//     for (int iter = 0; iter < num_iter; ++iter) {
-//         workerAntKernel<<<blocks, threads_count>>>(m, n_cities, d_tours, d_choice_info, d_selection_prob_all, d_visited, d_tour_lengths, d_distances, d_states);
-//         cudaDeviceSynchronize();
-
-//         pheromoneUpdateKernel<<<blocks, threads_count>>>(
-//             alpha, 
-//             beta,
-//             evaporate,
-//             Q,
-//             d_pheromone,
-//             d_tours,
-//             n_cities,
-//             m,
-//             d_choice_info,
-//             d_distances,
-//             d_tour_lengths
-//         );
-//         cudaDeviceSynchronize();
-
-
-//     }
-
-//     std::vector<float> tour_lengths_host(m);
-//     cudaMemcpy(tour_lengths_host.data(), d_tour_lengths, tour_lengths_size, cudaMemcpyDeviceToHost);
-
-//     float best = 1e9;
-//     for (int i = 0; i < m; ++i) {
-//         if (tour_lengths_host[i] < best) {
-//             best = tour_lengths_host[i];
-//         }
-//     }
-
-//     // std::string full_output_path = prepare_output_path(output_file);
-//     // std::ofstream ofs(full_output_path);
-//     // if (!ofs.is_open()) {
-//     //     std::cerr << "Error opening output file: " << full_output_path << std::endl;
-//     //     return;
-//     // }
-
-//     // ofs << best << "\n";
-//     // ofs.close();
-
-//     cudaFree(d_pheromone);
-//     cudaFree(d_choice_info);
-//     cudaFree(d_distances);
-//     cudaFree(d_tours);
-//     cudaFree(d_selection_prob_all);
-//     cudaFree(d_visited);
-//     cudaFree(d_tour_lengths);
-//     cudaFree(d_states);
-
-//     std::cout << "Best tour length: " << best << std::endl;
-// }
-
-
 void worker(const std::vector<std::vector<float>>& graph, int num_iter, float alpha, float beta, float evaporate, int seed, std::string output_file) {
     std::cout << "Running WORKER algorithm with CUDA...\n";
 
@@ -285,6 +185,8 @@ void worker(const std::vector<std::vector<float>>& graph, int num_iter, float al
     init_rng<<<blocks, threads_count>>>(d_states, seed);
     cudaDeviceSynchronize();
 
+    int threads_pheromone = threads_count * threads_count;
+
     // Host buffers to fetch data back from GPU
     std::vector<int> tours_host(m * n_cities);
     std::vector<float> choice_info_host(n_cities * n_cities);
@@ -296,7 +198,7 @@ void worker(const std::vector<std::vector<float>>& graph, int num_iter, float al
         workerAntKernel<<<blocks, threads_count>>>(m, n_cities, d_tours, d_choice_info, d_selection_prob_all, d_visited, d_tour_lengths, d_distances, d_states);
         cudaDeviceSynchronize();
 
-        pheromoneUpdateKernel<<<blocks, threads_count>>>(
+        pheromoneUpdateKernel<<<blocks, threads_pheromone>>>(
             alpha, 
             beta,
             evaporate,
