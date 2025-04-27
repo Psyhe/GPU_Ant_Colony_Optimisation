@@ -258,6 +258,8 @@ void worker(const std::vector<std::vector<float>>& graph, int num_iter, float al
         }
     }
 
+    
+
     // Device memory
     float *d_pheromone, *d_choice_info, *d_distances, *d_selection_prob_all, *d_tour_lengths;
     int *d_tours;
@@ -274,8 +276,9 @@ void worker(const std::vector<std::vector<float>>& graph, int num_iter, float al
     cudaMalloc(&d_states, m * sizeof(curandState));
 
     cudaMemcpy(d_distances, distances_host.data(), matrix_size, cudaMemcpyHostToDevice);
-    cudaMemset(d_pheromone, 0, matrix_size);
-
+    std::vector<float> initial_pheromone(n_cities * n_cities, 1.0f);
+    cudaMemcpy(d_pheromone, initial_pheromone.data(), matrix_size, cudaMemcpyHostToDevice);
+    
     int threads_count = n_cities;
     int blocks = (m + threads_count - 1) / threads_count; // enough blocks for all ants
 
