@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <iomanip> // for better formatting
 #include <fstream>
+#include <chrono>
 
 #define N_MAX_THREADS_PER_BLOCK 1024
 
@@ -192,6 +193,11 @@ std::string prepare_output_path(const std::string& output_file) {
 void worker(const std::vector<std::vector<float>>& graph, int num_iter, float alpha, float beta, float evaporate, int seed, std::string output_file) {
     std::cout << "Running WORKER algorithm with CUDA...\n";
 
+    auto start_total = std::chrono::high_resolution_clock::now();
+
+    std::chrono::duration<double> total_kernel = 0.0;
+    std::chrono::duration<double> total_pheromone = 0.0;
+
     int n_cities = graph.size();
     int m = n_cities; // number of ants = number of cities
     float Q = 1.0f;
@@ -253,10 +259,14 @@ void worker(const std::vector<std::vector<float>>& graph, int num_iter, float al
 
     for (int iter = 0; iter < num_iter; ++iter) {
         // std::cout << "\n=== Iteration " << iter + 1 << " ===\n";
-
+        auto start_kernel = std::chrono::high_resolution_clock::now();
         workerAntKernel<<<blocks_worker, thread_worker_count>>>(m, n_cities, d_tours, d_choice_info, d_selection_prob_all, d_visited, d_tour_lengths, d_distances, d_states);
         cudaDeviceSynchronize();
+        auto end_kernel = std::chrono::high_resolution_clock::now();
 
+        total_kernel += end_kernel - start_kernel;
+
+        auto start_kernel_pheromone = std::chrono::high_resolution_clock::now();
         pheromoneUpdateKernelBasic<<<blocks_worker, thread_worker_count>>>(
         // pheromoneUpdateKernel<<<blocks_pheromone, threads_pheromone>>>(
             alpha, 
@@ -273,11 +283,15 @@ void worker(const std::vector<std::vector<float>>& graph, int num_iter, float al
         );
         cudaDeviceSynchronize();
 
+        auto end_kernel_pheromone = std::chrono::high_resolution_clock::now();
+
+        total_kernel_pheromone += end_kernel_pheromone - start_kernel_pheromone;
+
         // Copy back tours and lengths
-        cudaMemcpy(tours_host.data(), d_tours, array_size, cudaMemcpyDeviceToHost);
-        cudaMemcpy(tour_lengths_host.data(), d_tour_lengths, tour_lengths_size, cudaMemcpyDeviceToHost);
-        cudaMemcpy(choice_info_host.data(), d_choice_info, matrix_size, cudaMemcpyDeviceToHost);
-        cudaMemcpy(initial_pheromone.data(), d_pheromone, matrix_size, cudaMemcpyDeviceToHost);
+        // cudaMemcpy(tours_host.data(), d_tours, array_size, cudaMemcpyDeviceToHost);
+        // cudaMemcpy(tour_lengths_host.data(), d_tour_lengths, tour_lengths_size, cudaMemcpyDeviceToHost);
+        // cudaMemcpy(choice_info_host.data(), d_choice_info, matrix_size, cudaMemcpyDeviceToHost);
+        // cudaMemcpy(initial_pheromone.data(), d_pheromone, matrix_size, cudaMemcpyDeviceToHost);
 
         // // Print tours
         // for (int ant = 0; ant < m; ++ant) {
@@ -306,6 +320,12 @@ void worker(const std::vector<std::vector<float>>& graph, int num_iter, float al
         // }
     }
 
+    cudaMemcpy(tours_host.data(), d_tours, array_size, cudaMemcpyDeviceToHost);
+    cudaMemcpy(tour_lengths_host.data(), d_tour_lengths, tour_lengths_size, cudaMemcpyDeviceToHost);
+    cudaMemcpy(choice_info_host.data(), d_choice_info, matrix_size, cudaMemcpyDeviceToHost);
+    cudaMemcpy(initial_pheromone.data(), d_pheromone, matrix_size, cudaMemcpyDeviceToHost);
+
+
     float best = 1e9;
     int best_id = 0;
     for (int i = 0; i < m; ++i) {
@@ -323,6 +343,14 @@ void worker(const std::vector<std::vector<float>>& graph, int num_iter, float al
     cudaFree(d_visited);
     cudaFree(d_tour_lengths);
     cudaFree(d_states);
+
+    auto end_total = std::chrono::high_resolution_clock::now(); // End total timer
+    std::chrono::duration<double> total_duration = end_total - start_total;
+
+    std::cout << "Total kernel time: " << total_kernel << endl;
+    std::cout << "Total kernel pheromone time: " << total_kernel_pheromone << endl;
+    std::cout << "Total time: " << total_duration << endl;
+
 
     std::string output_path = prepare_output_path(output_file);
     std::ofstream out(output_path);
