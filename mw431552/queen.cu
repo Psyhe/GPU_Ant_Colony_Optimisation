@@ -11,6 +11,7 @@
 #include <chrono>
 
 #define N_MAX_THREADS_PER_BLOCK 1024
+#define N_CITIES 1024
 
 __global__ void init_rng(curandState* states, unsigned long seed) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
