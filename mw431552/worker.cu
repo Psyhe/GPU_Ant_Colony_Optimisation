@@ -135,7 +135,7 @@ __global__ void workerAntKernel(
     }
 
     int step = 0;
-    int current_city = 1;
+    int current_city = 0;
     tours[offset + step] = current_city;
     visited[offset + current_city] = true;
     float tour_len = 0.0f;
@@ -209,11 +209,15 @@ void worker(const std::vector<std::vector<float>>& graph, int num_iter, float al
     size_t tour_lengths_size = m * sizeof(float);
 
     // Host distances matrix
+    std::cout << "Host distances" << std::endl;
     std::vector<float> distances_host(n_cities * n_cities);
     for (int i = 0; i < n_cities; ++i) {
         for (int j = 0; j < n_cities; ++j) {
             distances_host[i * n_cities + j] = graph[i][j];
+            std::cout << graph[i][j] << " ";
         }
+
+        std::cout << std::endl;
     }
 
     
