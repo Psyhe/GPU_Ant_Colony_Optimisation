@@ -266,19 +266,19 @@ void queen(const std::vector<std::vector<float>>& graph, int num_iter, float alp
         total_pheromone += end_kernel_pheromone - start_kernel_pheromone;
 
         // Fetch results
-        // cudaMemcpy(tours_host.data(), d_tours, array_size, cudaMemcpyDeviceToHost);
-        // cudaMemcpy(tour_lengths_host.data(), d_tour_lengths, tour_lengths_size, cudaMemcpyDeviceToHost);
-        // cudaMemcpy(choice_info_host.data(), d_choice_info, matrix_size, cudaMemcpyDeviceToHost);
-        // cudaMemcpy(initial_pheromone.data(), d_pheromone, matrix_size, cudaMemcpyDeviceToHost);
+        cudaMemcpy(tours_host.data(), d_tours, array_size, cudaMemcpyDeviceToHost);
+        cudaMemcpy(tour_lengths_host.data(), d_tour_lengths, tour_lengths_size, cudaMemcpyDeviceToHost);
+        cudaMemcpy(choice_info_host.data(), d_choice_info, matrix_size, cudaMemcpyDeviceToHost);
+        cudaMemcpy(initial_pheromone.data(), d_pheromone, matrix_size, cudaMemcpyDeviceToHost);
 
-        // Print tours
-        // for (int queen = 0; queen < m; ++queen) {
-        //     std::cout << "Queen " << queen << " tour: ";
-        //     for (int step = 0; step < n_cities; ++step) {
-        //         std::cout << tours_host[queen * n_cities + step] << " ";
-        //     }
-        //     std::cout << " (length: " << tour_lengths_host[queen] << ")\n";
-        // }
+        Print tours
+        for (int queen = 0; queen < m; ++queen) {
+            std::cout << "Queen " << queen << " tour: ";
+            for (int step = 0; step < n_cities; ++step) {
+                std::cout << tours_host[queen * n_cities + step] << " ";
+            }
+            std::cout << " (length: " << tour_lengths_host[queen] << ")\n";
+        }
 
         // std::cout << "Pheromone Info Matrix:\n";
         // for (int i = 0; i < n_cities; ++i) {
