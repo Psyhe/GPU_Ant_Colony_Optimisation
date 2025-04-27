@@ -1,4 +1,3 @@
-#include "algorithm.h"
 #include <cuda_runtime.h>
 #include <curand_kernel.h>
 #include <iostream>
