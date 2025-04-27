@@ -124,7 +124,7 @@ __global__ void workerAntKernel(
     }
 
     for (int i = 0; i < n_cities; i++) {
-        cout << tours[offset + i] << " ";
+        std::cout << tours[offset + i] << " ";
     }
 
     tour_len += distances[current_city * n_cities + tours[offset]];
