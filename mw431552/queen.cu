@@ -26,6 +26,8 @@ __global__ void queenAntKernel(float *choice_info, float *distances, int *tours,
     if (tid < n_cities) {
         visited[tid] = 0; 
         selection_prob_all[tid] = 0.0f;
+
+        tours[tid] = 15;
     }
 
     __syncthreads();
