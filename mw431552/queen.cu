@@ -31,7 +31,7 @@ __global__ void queenAntKernel(float *choice_info, float *distances, int *tours,
     __syncthreads();
 
     curandState state = states[queen_id]; // << only one RNG per queen
-    int current_city = 0;
+    int current_city = 1;
     currentcity[0] = current_city;
 
     if (tid == 0) {
