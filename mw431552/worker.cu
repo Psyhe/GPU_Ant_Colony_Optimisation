@@ -123,10 +123,6 @@ __global__ void workerAntKernel(
         step++;
     }
 
-    for (int i = 0; i < n_cities; i++) {
-        std::cout << tours[offset + i] << " ";
-    }
-
     tour_len += distances[current_city * n_cities + tours[offset]];
     tour_lengths[tid] = tour_len;
 
