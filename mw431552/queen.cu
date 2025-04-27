@@ -17,8 +17,8 @@
 
 __global__ void queenAntKernel(float *choice_info, float *distances, int *tours, float *tour_lengths, int n_cities, curandState *states) {
 
-    __shared__ int tabu[MAX_CITIES];
-    __shared__ float probabilities[MAX_CITIES];
+    __shared__ int tabu[N_CITIES];
+    __shared__ float probabilities[N_CITIES];
     __shared__ int current_city;
     
     int tid = threadIdx.x;
