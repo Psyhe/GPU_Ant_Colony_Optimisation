@@ -102,9 +102,9 @@ void queen(const std::vector<std::vector<float>>& graph, int num_iter, float alp
     for (int i = 0; i < n_cities; ++i) {
         for (int j = 0; j < n_cities; ++j) {
             distances_host[i * n_cities + j] = graph[i][j];
-           // std::cout << graph[i][j] << " ";
+            std::cout << graph[i][j] << " ";
         }
-        //std::cout << std::endl;
+        std::cout << std::endl;
     }
 
     // Device memory
@@ -193,21 +193,21 @@ void queen(const std::vector<std::vector<float>>& graph, int num_iter, float alp
             std::cout << " (length: " << tour_lengths_host[queen] << ")\n";
         }
 
-        // std::cout << "Pheromone Info Matrix:\n";
-        // for (int i = 0; i < n_cities; ++i) {
-        //     for (int j = 0; j < n_cities; ++j) {
-        //         std::cout << std::fixed << std::setprecision(4) << initial_pheromone[i * n_cities + j] << "\t";
-        //     }
-        //     std::cout << "\n";
-        // }
+        std::cout << "Pheromone Info Matrix:\n";
+        for (int i = 0; i < n_cities; ++i) {
+            for (int j = 0; j < n_cities; ++j) {
+                std::cout << std::fixed << std::setprecision(4) << initial_pheromone[i * n_cities + j] << "\t";
+            }
+            std::cout << "\n";
+        }
 
-        // std::cout << "Choice Info Matrix:\n";
-        // for (int i = 0; i < n_cities; ++i) {
-        //     for (int j = 0; j < n_cities; ++j) {
-        //         std::cout << std::fixed << std::setprecision(4) << choice_info_host[i * n_cities + j] << "\t";
-        //     }
-        //     std::cout << "\n";
-        // }
+        std::cout << "Choice Info Matrix:\n";
+        for (int i = 0; i < n_cities; ++i) {
+            for (int j = 0; j < n_cities; ++j) {
+                std::cout << std::fixed << std::setprecision(4) << choice_info_host[i * n_cities + j] << "\t";
+            }
+            std::cout << "\n";
+        }
     }
 
     cudaMemcpy(tours_host.data(), d_tours, array_size, cudaMemcpyDeviceToHost);
