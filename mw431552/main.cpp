@@ -15,9 +15,9 @@ int main(int argc, char* argv[]) {
     string output_file = argv[2]; // Not used yet
     string type = argv[3];
     int num_iter = stoi(argv[4]);
-    double alpha = stod(argv[5]);
-    double beta = stod(argv[6]);
-    double evaporate = stod(argv[7]);
+    float alpha = stod(argv[5]);
+    float beta = stod(argv[6]);
+    float evaporate = stod(argv[7]);
     int seed = stoi(argv[8]);
 
     auto graph = read_input_file(input_file);

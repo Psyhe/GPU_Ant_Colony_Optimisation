@@ -18,25 +18,25 @@ float ceil_distance(float x1, float y1, float x2, float y2) {
     return ceil(euclidean_distance(x1, y1, x2, y2));
 }
 
-double geo_distance(float lat1, float lon1, float lat2, float lon2) {
-    const double RRR = 6378.388;
+float geo_distance(float lat1, float lon1, float lat2, float lon2) {
+    const float RRR = 6378.388;
 
-    auto to_radians = [](float x) -> double {
+    auto to_radians = [](float x) -> float {
         int deg = int(x);
-        double min = x - deg;
+        float min = x - deg;
         return M_PI * (deg + 5.0 * min / 3.0) / 180.0;
     };
 
-    double latitude1 = to_radians(lat1);
-    double longitude1 = to_radians(lon1);
-    double latitude2 = to_radians(lat2);
-    double longitude2 = to_radians(lon2);
+    float latitude1 = to_radians(lat1);
+    float longitude1 = to_radians(lon1);
+    float latitude2 = to_radians(lat2);
+    float longitude2 = to_radians(lon2);
 
-    double q1 = cos(longitude1 - longitude2);
-    double q2 = cos(latitude1 - latitude2);
-    double q3 = cos(latitude1 + latitude2);
+    float q1 = cos(longitude1 - longitude2);
+    float q2 = cos(latitude1 - latitude2);
+    float q3 = cos(latitude1 + latitude2);
 
-    double dij = int(RRR * acos(0.5 * ((1.0 + q1) * q2 - (1.0 - q1) * q3)) + 1.0);
+    float dij = int(RRR * acos(0.5 * ((1.0 + q1) * q2 - (1.0 - q1) * q3)) + 1.0);
     return dij;
 }
 
