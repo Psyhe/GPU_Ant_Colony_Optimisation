@@ -80,55 +80,6 @@ __global__ void queenAntKernel(float *choice_info, float *distances, int *tours,
     states[queen_id] = state;
 }
 
-
-__global__ void pheromoneUpdateKernel(
-    float alpha,
-    float beta,
-    float evaporation_rate,
-    float Q,
-    float *pheromone,
-    int *tours,
-    int n_cities,
-    int m,
-    float *choice_info,
-    float *distances,
-    float *tour_lengths
-) {
-    int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid >= n_cities * n_cities) return;
-
-    int local_X = tid % n_cities;
-    int local_Y = tid / n_cities;
-
-    pheromone[tid] *= (1.0f - evaporation_rate);
-
-    float pheromone_update_value = 0.0f;
-
-    for (int i = 0; i < m; i++) {
-        int offset = i * n_cities;
-        for (int j = 0; j < n_cities - 1; j++) {
-            if ((tours[offset + j] == local_X && tours[offset + j + 1] == local_Y) ||
-                (tours[offset + j] == local_Y && tours[offset + j + 1] == local_X))  {
-                pheromone_update_value += Q / tour_lengths[i];
-            }
-        }
-        if ((tours[offset + n_cities - 1] == local_X && tours[offset] == local_Y) ||
-            (tours[offset + n_cities - 1] == local_Y && tours[offset] == local_X)) {
-            pheromone_update_value += Q / tour_lengths[i];
-        }
-    }
-
-    pheromone[tid] += pheromone_update_value;
-
-    if (distances[local_X * n_cities + local_Y] > 0.0f) {
-        float tau = __powf(pheromone[tid], alpha);
-        float eta = __powf(1.0f / distances[local_X * n_cities + local_Y], beta);
-        choice_info[tid] = tau * eta;
-    } else {
-        choice_info[tid] = 0.0f;
-    }
-}
-
 void queen(const std::vector<std::vector<float>>& graph, int num_iter, float alpha, float beta, float evaporate, int seed, std::string output_file) {
     std::cout << "Running QUEEN algorithm with CUDA...\n";
 
