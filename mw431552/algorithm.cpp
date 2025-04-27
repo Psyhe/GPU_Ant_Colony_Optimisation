@@ -13,25 +13,25 @@ std::string prepare_output_path(const std::string& output_file) {
     }
 }
 
-void worker(const std::vector<std::vector<float>>& graph, int num_iter, double alpha, double beta, double evaporate, int seed, std::string output_file) {
-    std::cout << "Running WORKER algorithm...\n";
-    std::cout << "Parameters: NUM_ITER=" << num_iter << ", ALPHA=" << alpha 
-              << ", BETA=" << beta << ", EVAPORATE=" << evaporate << ", SEED=" << seed << std::endl;
+// void worker(const std::vector<std::vector<float>>& graph, int num_iter, double alpha, double beta, double evaporate, int seed, std::string output_file) {
+//     std::cout << "Running WORKER algorithm...\n";
+//     std::cout << "Parameters: NUM_ITER=" << num_iter << ", ALPHA=" << alpha 
+//               << ", BETA=" << beta << ", EVAPORATE=" << evaporate << ", SEED=" << seed << std::endl;
 
-    std::string full_output_path = prepare_output_path(output_file);
+//     std::string full_output_path = prepare_output_path(output_file);
 
-    std::ofstream ofs(full_output_path);
-    if (!ofs.is_open()) {
-        std::cerr << "Error: cannot open output file: " << full_output_path << std::endl;
-        return;
-    }
+//     std::ofstream ofs(full_output_path);
+//     if (!ofs.is_open()) {
+//         std::cerr << "Error: cannot open output file: " << full_output_path << std::endl;
+//         return;
+//     }
 
-    ofs << "Running WORKER algorithm...\n";
-    ofs << "Parameters: NUM_ITER=" << num_iter << ", ALPHA=" << alpha 
-        << ", BETA=" << beta << ", EVAPORATE=" << evaporate << ", SEED=" << seed << std::endl;
+//     ofs << "Running WORKER algorithm...\n";
+//     ofs << "Parameters: NUM_ITER=" << num_iter << ", ALPHA=" << alpha 
+//         << ", BETA=" << beta << ", EVAPORATE=" << evaporate << ", SEED=" << seed << std::endl;
     
-    ofs.close();
-}
+//     ofs.close();
+// }
 
 void queen(const std::vector<std::vector<float>>& graph, int num_iter, double alpha, double beta, double evaporate, int seed, std::string output_file) {
     std::cout << "Running QUEEN algorithm...\n";

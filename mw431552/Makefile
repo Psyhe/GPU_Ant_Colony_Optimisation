@@ -1,22 +1,15 @@
-CXX = g++
-CXXFLAGS = -std=c++17 -Wall -O2
-TARGET = acotsp
+NVCC = nvcc
+CXXFLAGS = -O2 -std=c++17
+LDFLAGS = -lcuda -lcurand
 
-OBJS = main.o graph.o algorithm.o
+TARGET = acotsp
+SRCS = main.cpp worker.cu algorithm.cpp
+OBJS = $(SRCS:.cpp=.o)
 
 all: $(TARGET)
 
-$(TARGET): $(OBJS)
-	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJS)
-
-main.o: main.cpp graph.h algorithm.h
-	$(CXX) $(CXXFLAGS) -c main.cpp
-
-graph.o: graph.cpp graph.h
-	$(CXX) $(CXXFLAGS) -c graph.cpp
-
-algorithm.o: algorithm.cpp algorithm.h
-	$(CXX) $(CXXFLAGS) -c algorithm.cpp
+$(TARGET): $(SRCS)
+	$(NVCC) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
 clean:
 	rm -f $(TARGET) *.o
