@@ -22,7 +22,7 @@ int main(int argc, char* argv[]) {
 
     auto graph = read_input_file(input_file);
 
-    print_graph(graph);
+    // print_graph(graph);
 
     if (type == "WORKER") {
         worker(graph, num_iter, alpha, beta, evaporate, seed, output_file);

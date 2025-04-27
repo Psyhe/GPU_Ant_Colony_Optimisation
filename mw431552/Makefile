@@ -1,15 +1,12 @@
-NVCC = nvcc
-CXXFLAGS = -O2 -std=c++17
-LDFLAGS = -lcuda -lcurand
-
 TARGET = acotsp
-SRCS = main.cpp worker.cu algorithm.cpp
-OBJS = $(SRCS:.cpp=.o)
+SRCS = main.cpp worker.cu algorithm.cpp input.cpp
+CUDA_FLAGS = -O2 -std=c++17
+LIBS = -lcuda -lcurand
 
 all: $(TARGET)
 
 $(TARGET): $(SRCS)
-	$(NVCC) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
+	nvcc $(CUDA_FLAGS) -o $@ $^ $(LIBS)
 
 clean:
-	rm -f $(TARGET) *.o
+	rm -f $(TARGET)
