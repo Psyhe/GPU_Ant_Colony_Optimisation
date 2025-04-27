@@ -5,6 +5,8 @@
 #include <fstream>
 #include <vector>
 #include <string>
+#include <iomanip> // for better formatting
+
 
 __global__ void pheromoneUpdateKernel(
     float alpha,
