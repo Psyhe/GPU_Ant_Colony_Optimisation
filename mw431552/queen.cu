@@ -16,9 +16,9 @@
 #define N_CURRENT_CITIES 1
 
 __global__ void queenAntKernel(float *choice_info, float *distances, int *tours, float *tour_lengths, int n_cities, curandState *states) {
-    __shared__ int visited[N_CITIES];
-    __shared__ float selection_prob_all[N_CITIES];
-    __shared__ int currentcity[N_CURRENT_CITIES];
+    // __shared__ int visited[N_CITIES];
+    // __shared__ float selection_prob_all[N_CITIES];
+    // __shared__ int currentcity[N_CURRENT_CITIES];
 
     int tid = threadIdx.x;
     int queen_id = blockIdx.x; // Each block is one queen
