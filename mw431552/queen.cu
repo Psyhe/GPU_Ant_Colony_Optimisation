@@ -34,7 +34,7 @@ __global__ void queenAntKernel(float *choice_info, float *distances, int *tours,
 
 
     curandState state = states[queen_id];
-    current_city = 0;
+    int current_city = 0;
     currentcity[0] = current_city;
 
     if (tid == 0) {
