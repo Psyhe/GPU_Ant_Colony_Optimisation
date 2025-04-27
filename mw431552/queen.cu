@@ -55,7 +55,7 @@ __global__ void queenAntKernel(float *choice_info, float *distances, int *tours,
             int selected_city = -1;
             for (int i = 0; i < n_cities; i++) {
                 cumulative += probability_list[i];
-                if (cumulative >= rand_val && rand_val > 0) {
+                if (cumulative >= rand_val) {
                     selected_city = i;
                     break;
                 }

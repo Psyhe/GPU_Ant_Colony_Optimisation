@@ -61,7 +61,7 @@ __global__ void workerAntKernel(
 
         for (int j = 0; j < n_cities; j++) {
             cumulative_prob += selection_prob_all[offset + j];
-            if (cumulative_prob >= r && cumulative_prob > 0) {
+            if (cumulative_prob >= r) {
                 next_city = j;
                 break;
             }
