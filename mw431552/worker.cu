@@ -285,7 +285,7 @@ void worker(const std::vector<std::vector<float>>& graph, int num_iter, float al
 
         auto end_kernel_pheromone = std::chrono::high_resolution_clock::now();
 
-        total_kernel_pheromone += end_kernel_pheromone - start_kernel_pheromone;
+        total_pheromone += end_kernel_pheromone - start_kernel_pheromone;
 
         // Copy back tours and lengths
         // cudaMemcpy(tours_host.data(), d_tours, array_size, cudaMemcpyDeviceToHost);
@@ -347,9 +347,9 @@ void worker(const std::vector<std::vector<float>>& graph, int num_iter, float al
     auto end_total = std::chrono::high_resolution_clock::now(); // End total timer
     std::chrono::duration<double> total_duration = end_total - start_total;
 
-    std::cout << "Total kernel time: " << total_kernel << std::endl;
-    std::cout << "Total kernel pheromone time: " << total_kernel_pheromone << std::endl;
-    std::cout << "Total time: " << total_duration << std::endl;
+    std::cout << "Total kernel time: " << total_kernel.count() << std::endl;
+    std::cout << "Total kernel pheromone time: " << total_pheromone.count() << std::endl;
+    std::cout << "Total time: " << total_duration.count() << std::endl;
 
 
     std::string output_path = prepare_output_path(output_file);
