@@ -237,6 +237,9 @@ void queen(const std::vector<std::vector<float>>& graph, int num_iter, float alp
 
     std::cout << "Total kernel time: " << total_kernel / 1000.0f << " seconds" << std::endl;
     std::cout << "Total pheromone update time: " << total_pheromone / 1000.0f << " seconds" << std::endl;
+    std::cout << "Average kernel time: " << total_kernel / num_iter << " ms" << std::endl;
+    std::cout << "Average pheromone kernel time: " << total_pheromone / num_iter << " ms" << std::endl;
+
     std::cout << "Total time: " << total_time_ms / 1000.0f << " seconds" << std::endl;
 
     std::string output_path = prepare_output_path(output_file);

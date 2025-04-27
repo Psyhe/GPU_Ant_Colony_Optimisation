@@ -215,6 +215,9 @@ void worker(const std::vector<std::vector<float>>& graph, int num_iter, float al
 
     std::cout << "Total kernel time: " << total_kernel / 1000.0f << " s" << std::endl;
     std::cout << "Total kernel pheromone time: " << total_pheromone / 1000.0f << " s" << std::endl;
+    std::cout << "Average kernel time: " << total_kernel / num_iter << " ms" << std::endl;
+    std::cout << "Average pheromone kernel time: " << total_pheromone / num_iter << " ms" << std::endl;
+
     std::cout << "Total time: " << total_time / 1000.0f << " s" << std::endl;
 
     cudaEventDestroy(start_total);
