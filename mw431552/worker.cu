@@ -436,26 +436,8 @@ void worker(const std::vector<std::vector<float>>& graph_constructed, int num_it
     cudaGraphInstantiate(&graph_exec, graph, NULL, NULL, 0);
 
     // Timing events
-    cudaEvent_t start_kernel;
-    cudaEventCreate(&start_kernel);
-    cudaEvent_t end_kernel;
-    cudaEventCreate(&end_kernel);
+    runGraphIterations(graph_exec, stream, num_iter, total_kernel);
 
-    for (int iter = 0; iter < num_iter; ++iter) {
-        cudaEventRecord(start_kernel, stream);
-        
-        // Launch graph instead of individual kernels
-        cudaGraphLaunch(graph_exec, stream);
-        cudaStreamSynchronize(stream);
-
-        cudaEventRecord(end_kernel, stream);
-        cudaEventSynchronize(end_kernel);
-
-        float iteration_time = 0.0f;
-        cudaEventElapsedTime(&iteration_time, start_kernel, end_kernel);
-
-        total_kernel += iteration_time;
-    }
 
     // Cleanup Graph resources
     cudaGraphDestroy(graph);
@@ -498,8 +480,7 @@ void worker(const std::vector<std::vector<float>>& graph_constructed, int num_it
 
     cudaEventDestroy(start_total);
     cudaEventDestroy(end_total);
-    cudaEventDestroy(start_kernel);
-    cudaEventDestroy(end_kernel);
+
 
     generate_output(total_kernel, num_iter, total_time, output_file, tours_host, best_id, best, n_cities);
 }
