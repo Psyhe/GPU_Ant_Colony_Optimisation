@@ -31,28 +31,27 @@ void generate_output(float total_kernel, int num_iter, float total_time_ms, std:
         }
     }
 
-    std::cout << "Total kernel+pheromone time: " << total_kernel / 1000.0f << " seconds" << std::endl;
-    std::cout << "Average graph execution time: " << total_kernel / num_iter << " ms" << std::endl;
-    std::cout << "Total time: " << total_time_ms / 1000.0f << " seconds" << std::endl;
+    // std::cout << "Total kernel+pheromone time: " << total_kernel / 1000.0f << " seconds" << std::endl;
+    // std::cout << "Average graph execution time: " << total_kernel / num_iter << " ms" << std::endl;
+    // std::cout << "Total time: " << total_time_ms / 1000.0f << " seconds" << std::endl;
 
     std::string output_path = prepare_output_path(output_file);
     std::ofstream out(output_path);
 
-    std::cout << output_path << std::endl;
 
     if (!out.is_open()) {
         std::cerr << "Failed to open output file: " << output_path << std::endl;
         return;
     }
 
-    std::cout << "\nBest tour length: " << best << std::endl;
+    std::cout << best << std::endl;
     out << best << std::endl;
 
     for (int step = 0; step < n_cities; ++step) {
-        // std::cout << tours_host[best_id * n_cities + step] << " ";
+        std::cout << tours_host[best_id * n_cities + step] << " ";
         out << tours_host[best_id * n_cities + step] + 1 << " ";
     }
-    // std::cout << std::endl;
+    std::cout << std::endl;
     out << std::endl;
 
     out.close();

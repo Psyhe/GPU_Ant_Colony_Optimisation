@@ -385,36 +385,36 @@ void queen(const std::vector<std::vector<float>>& graph, int num_iter, float alp
         d_states
     );
 
-    pheromoneUpdateKernelBasic<<<1, m, 0, stream>>>(
-        alpha, beta, evaporate, Q,
-        d_pheromone, d_tours, n_cities, m,
-        d_choice_info, d_distances, d_tour_lengths
-    );
-
-    pheromoneEvaporationAndChoiceInfoKernel<<<blocks_pheromone, threads_pheromone, 0, stream>>>(
-         alpha,
-         beta,
-         evaporate,
-         d_pheromone,
-         d_choice_info,
-         d_distances,
-         n_cities
-    );
-
-
-    // pheromoneUpdateKernel<<<blocks_pheromone, threads_pheromone, 0, stream>>>(
-    //     alpha,
-    //     beta,
-    //     evaporate,
-    //     Q,
-    //     d_pheromone,
-    //     d_tours,
-    //     n_cities,
-    //     m,
-    //     d_choice_info,
-    //     d_distances,
-    //     d_tour_lengths
+    // pheromoneUpdateKernelBasic<<<1, m, 0, stream>>>(
+    //     alpha, beta, evaporate, Q,
+    //     d_pheromone, d_tours, n_cities, m,
+    //     d_choice_info, d_distances, d_tour_lengths
     // );
+
+    // pheromoneEvaporationAndChoiceInfoKernel<<<blocks_pheromone, threads_pheromone, 0, stream>>>(
+    //      alpha,
+    //      beta,
+    //      evaporate,
+    //      d_pheromone,
+    //      d_choice_info,
+    //      d_distances,
+    //      n_cities
+    // );
+
+
+    pheromoneUpdateKernel<<<blocks_pheromone, threads_pheromone, 0, stream>>>(
+        alpha,
+        beta,
+        evaporate,
+        Q,
+        d_pheromone,
+        d_tours,
+        n_cities,
+        m,
+        d_choice_info,
+        d_distances,
+        d_tour_lengths
+    );
 
     cudaStreamEndCapture(stream, &graph_capture);
     cudaGraphInstantiate(&graph_exec, graph_capture, NULL, NULL, 0);
