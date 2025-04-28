@@ -12,7 +12,7 @@ if len(sys.argv) != 2:
 test_name = sys.argv[1]  # Get the test name from command line argument
 
 # Configuration
-x_values = [8, 32, 42, 64, 80]
+x_values = [32, 42, 64]
 command_base = "./acotsp ../input/{}.tsp output.txt WORKER 1000 1 2 0.5 {{}}".format(test_name)
 
 # The four sections to parse

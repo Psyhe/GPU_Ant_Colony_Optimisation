@@ -166,17 +166,14 @@ void worker(const std::vector<std::vector<float>>& graph_constructed, int num_it
     const int ints_per_ant = (n_cities + 31) / 32;
     const size_t shared_memory_size = thread_worker_count * ints_per_ant * sizeof(unsigned int);
 
-    // CUDA Graph variables
     cudaGraph_t graph;
     cudaGraphExec_t graph_exec;
 
-    // Begin recording graph
     cudaStream_t stream;
     cudaStreamCreate(&stream);
 
     cudaStreamBeginCapture(stream, cudaStreamCaptureModeGlobal);
 
-    // --- Kernel launches inside the capture ---
     workerAntKernel<<<blocks_worker, thread_worker_count, shared_memory_size, stream>>>(
         m, n_cities, d_tours, d_choice_info, d_selection_prob_all,
         d_tour_lengths, d_distances, d_states
@@ -191,16 +188,13 @@ void worker(const std::vector<std::vector<float>>& graph_constructed, int num_it
     cudaStreamEndCapture(stream, &graph);
     cudaGraphInstantiate(&graph_exec, graph, NULL, NULL, 0);
 
-    // Timing events
     runGraphIterations(graph_exec, stream, num_iter, total_kernel);
 
 
-    // Cleanup Graph resources
     cudaGraphDestroy(graph);
     cudaGraphExecDestroy(graph_exec);
     cudaStreamDestroy(stream);
 
-    // Copy results back
     std::vector<int> tours_host(m * n_cities);
     std::vector<float> choice_info_host(n_cities * n_cities);
     std::vector<float> tour_lengths_host(m);
