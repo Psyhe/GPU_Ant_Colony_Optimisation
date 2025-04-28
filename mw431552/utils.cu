@@ -5,7 +5,7 @@
 #include <vector>
 #include <string>
 #include <algorithm>
-#include <iomanip> // for better formatting
+#include <iomanip>
 #include <fstream>
 #include <chrono>
 #include "utils.h"

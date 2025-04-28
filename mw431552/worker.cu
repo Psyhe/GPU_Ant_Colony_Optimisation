@@ -32,7 +32,6 @@ __global__ void workerAntKernel(
 
     curandState localState = states[tid];
 
-    // Initialize visited bits
     for (int i = 0; i < ints_per_ant; i++) {
         my_visited[i] = 0;
     }
@@ -41,7 +40,6 @@ __global__ void workerAntKernel(
     int current_city = 0;
     tours[offset + step] = current_city;
 
-    // Mark starting city visited
     {
         int idx = current_city / 32;
         int bit = current_city % 32;
@@ -83,7 +81,6 @@ __global__ void workerAntKernel(
 
         tours[offset + step] = next_city;
 
-        // Mark next city visited
         {
             int idx = next_city / 32;
             int bit = next_city % 32;
@@ -155,7 +152,6 @@ void worker(const std::vector<std::vector<float>>& graph_constructed, int num_it
     int threads_pheromone = std::min(N_MAX_THREADS_PER_BLOCK, all_threads_pheromone);
     int blocks_pheromone = (all_threads_pheromone + threads_pheromone - 1) / threads_pheromone;
 
-    // Warmup / initial pheromone update
     pheromoneUpdateKernel<<<blocks_pheromone, threads_pheromone>>>(
         alpha, beta, evaporate, Q,
         d_pheromone, d_tours, n_cities, m,
@@ -204,7 +200,6 @@ void worker(const std::vector<std::vector<float>>& graph_constructed, int num_it
     cudaMemcpy(choice_info_host.data(), d_choice_info, matrix_size, cudaMemcpyDeviceToHost);
     cudaMemcpy(initial_pheromone.data(), d_pheromone, matrix_size, cudaMemcpyDeviceToHost);
 
-    // Free memory
     cudaFree(d_pheromone);
     cudaFree(d_choice_info);
     cudaFree(d_distances);

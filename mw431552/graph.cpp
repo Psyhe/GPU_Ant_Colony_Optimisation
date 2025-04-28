@@ -53,7 +53,6 @@ std::vector<std::vector<float>> read_input_file(const std::string& filename) {
     int dimension = 0;
     string edge_weight_type;
     
-    // Parse metadata
     for (int i = 0; i < 6; ++i) {
         getline(infile, line);
         if (line.find("DIMENSION") != string::npos) {
@@ -67,7 +66,6 @@ std::vector<std::vector<float>> read_input_file(const std::string& filename) {
             size_t pos = line.find(":");
             if (pos != string::npos) {
                 edge_weight_type = line.substr(pos + 1);
-                // Remove potential leading spaces
                 edge_weight_type.erase(0, edge_weight_type.find_first_not_of(" \t"));
             }
             if (edge_weight_type != "EUC_2D" && edge_weight_type != "CEIL_2D" && edge_weight_type != "GEO") {
@@ -80,7 +78,6 @@ std::vector<std::vector<float>> read_input_file(const std::string& filename) {
 
     vector<City> cities(dimension);
 
-    // Read city coordinates
     for (int i = 0; i < dimension; ++i) {
         getline(infile, line);
         istringstream iss(line);
@@ -92,7 +89,6 @@ std::vector<std::vector<float>> read_input_file(const std::string& filename) {
 
     infile.close();
 
-    // Build distance matrix
     vector<vector<float>> distance_matrix(dimension, vector<float>(dimension, 0.0f));
 
     for (int i = 0; i < dimension; ++i) {
