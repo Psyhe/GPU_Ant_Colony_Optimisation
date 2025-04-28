@@ -13,6 +13,103 @@
 
 #define N_MAX_THREADS_PER_BLOCK 1024
 
+__inline__ __device__ float warpReduceSum(float val) {
+    for (int offset = warpSize/2; offset > 0; offset /= 2) {
+        val += __shfl_down_sync(0xffffffff, val, offset);
+    }
+    return val;
+}
+
+__global__ void workerAntKernelOptimizedStatic(
+    int m, int n_cities,
+    int* tours,
+    float* choice_info,
+    float* selection_prob_all,
+    bool* visited,
+    float* tour_lengths,
+    float* distances,
+    curandState* states
+) {
+    __shared__ float shared_selection_probs[N_MAX_THREADS_PER_BLOCK]; // STATIC shared array, fixed 1024
+
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid >= m) return;
+
+    int offset = tid * n_cities;
+    curandState localState = states[tid];
+
+    // Local visited array in registers
+    bool local_visited[N_MAX_THREADS_PER_BLOCK];
+
+    // Initialize visited
+    #pragma unroll
+    for (int i = 0; i < n_cities; i++) {
+        local_visited[i] = false;
+    }
+
+    int step = 0;
+    int current_city = 0;
+    tours[offset + step] = current_city;
+    local_visited[current_city] = true;
+    float tour_len = 0.0f;
+    step++;
+
+    while (step < n_cities) {
+        // Load probabilities into shared memory
+        for (int j = threadIdx.x; j < n_cities; j += blockDim.x) {
+            if (local_visited[j]) {
+                shared_selection_probs[j] = 0.0f;
+            } else {
+                shared_selection_probs[j] = choice_info[current_city * n_cities + j];
+            }
+        }
+
+        __syncthreads();
+
+        // Compute partial sum of probabilities
+        float local_sum = 0.0f;
+        for (int j = threadIdx.x; j < n_cities; j += blockDim.x) {
+            local_sum += shared_selection_probs[j];
+        }
+
+        // Reduce across warp
+        local_sum = warpReduceSum(local_sum);
+
+        // Now select next city
+        int next_city = -1;
+        if ((threadIdx.x & 31) == 0) {
+            float r = curand_uniform(&localState) * local_sum;
+            float cumulative_prob = 0.0f;
+            for (int j = 0; j < n_cities; j++) {
+                cumulative_prob += shared_selection_probs[j];
+                if (cumulative_prob >= r) {
+                    next_city = j;
+                    break;
+                }
+            }
+        }
+
+        // Broadcast next_city to all threads in warp
+        next_city = __shfl_sync(0xffffffff, next_city, 0);
+
+        // Update tour
+        tours[offset + step] = next_city;
+        local_visited[next_city] = true;
+        tour_len += distances[current_city * n_cities + next_city];
+
+        current_city = next_city;
+        step++;
+
+        __syncthreads();
+    }
+
+    // Close the loop
+    tour_len += distances[current_city * n_cities + tours[offset]];
+
+    tour_lengths[tid] = tour_len;
+    states[tid] = localState;
+}
+
 __global__ void workerAntKernel(
     int m, int n_cities,
     int* tours,
@@ -157,7 +254,8 @@ void worker(const std::vector<std::vector<float>>& graph, int num_iter, float al
 
     for (int iter = 0; iter < num_iter; ++iter) {
         cudaEventRecord(start_kernel);
-        workerAntKernel<<<blocks_worker, thread_worker_count>>>(
+        // workerAntKernel<<<blocks_worker, thread_worker_count>>>(
+        workerAntKernelOptimizedStatic<<<blocks_worker, thread_worker_count>>>(
             m, n_cities, d_tours, d_choice_info, d_selection_prob_all,
             d_visited, d_tour_lengths, d_distances, d_states
         );
