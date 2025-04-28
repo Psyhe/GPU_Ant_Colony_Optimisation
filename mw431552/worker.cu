@@ -256,7 +256,6 @@ __global__ void workerAntKernel(
     int* tours,
     float* choice_info,
     float* selection_prob_all,
-    bool *d_visited,
     float* tour_lengths,
     float* distances,
     curandState* states
@@ -372,7 +371,6 @@ void worker(const std::vector<std::vector<float>>& graph, int num_iter, float al
 
     float *d_pheromone, *d_choice_info, *d_distances, *d_selection_prob_all, *d_tour_lengths;
     int *d_tours;
-    bool *d_visited;
     curandState* d_states;
 
     cudaMalloc(&d_pheromone, matrix_size);
@@ -380,7 +378,6 @@ void worker(const std::vector<std::vector<float>>& graph, int num_iter, float al
     cudaMalloc(&d_distances, matrix_size);
     cudaMalloc(&d_tours, array_size);
     cudaMalloc(&d_selection_prob_all, float_array_size);
-    cudaMalloc(&d_visited, bool_array_size); // Still needed to match kernel signature
     cudaMalloc(&d_tour_lengths, tour_lengths_size);
     cudaMalloc(&d_states, m * sizeof(curandState));
 
@@ -423,7 +420,7 @@ void worker(const std::vector<std::vector<float>>& graph, int num_iter, float al
         cudaEventRecord(start_kernel);
         workerAntKernel<<<blocks_worker, thread_worker_count, shared_memory_size>>>(
             m, n_cities, d_tours, d_choice_info, d_selection_prob_all,
-            d_visited, d_tour_lengths, d_distances, d_states
+            d_tour_lengths, d_distances, d_states
         );
         cudaDeviceSynchronize();
         cudaEventRecord(end_kernel);
@@ -467,7 +464,6 @@ void worker(const std::vector<std::vector<float>>& graph, int num_iter, float al
     cudaFree(d_distances);
     cudaFree(d_tours);
     cudaFree(d_selection_prob_all);
-    cudaFree(d_visited);
     cudaFree(d_tour_lengths);
     cudaFree(d_states);
 
@@ -488,25 +484,7 @@ void worker(const std::vector<std::vector<float>>& graph, int num_iter, float al
     cudaEventDestroy(start_pheromone);
     cudaEventDestroy(end_pheromone);
 
-    std::string output_path = prepare_output_path(output_file);
-    std::ofstream out(output_path);
-
-    if (!out.is_open()) {
-        std::cerr << "Failed to open output file: " << output_path << std::endl;
-        return;
-    }
-
-    std::cout << "\nBest tour length: " << best << std::endl;
-    out << "Best tour length: " << best << std::endl;
-
-    for (int step = 0; step < n_cities; ++step) {
-        std::cout << tours_host[best_id * n_cities + step] << " ";
-        out << tours_host[best_id * n_cities + step] + 1 << " ";
-    }
-    std::cout << std::endl;
-    out << std::endl;
-
-    out.close();
+    generate_output(total_kernel, num_iter, total_time, output_file, tours_host, best_id, best, n_cities);
 }
 
 // void worker(const std::vector<std::vector<float>>& graph, int num_iter, float alpha, float beta, float evaporate, int seed, std::string output_file) {
