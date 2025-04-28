@@ -29,20 +29,6 @@ __global__ void pheromoneUpdateKernel(
     float *tour_lengths
 );
 
-__global__ void pheromoneUpdateKernelBasic(
-    float alpha,
-    float beta,
-    float evaporation_rate,
-    float Q,
-    float *pheromone,
-    int *tours,
-    int n_cities,
-    int m,
-    float *choice_info,
-    float *distances,
-    float *tour_lengths
-);
-
 void runGraphIterations(cudaGraphExec_t graph_exec, cudaStream_t stream, int num_iter, float &total_kernel);
 
 

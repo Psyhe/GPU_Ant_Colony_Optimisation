@@ -13,62 +13,164 @@
 
 #define N_MAX_THREADS_PER_BLOCK 1024
 #define N_CITIES 1024
-#define N_CURRENT_CITIES 1
 
-__global__ void queenAntKernelOptimized(float *choice_info, float *distances, int *tours, float *tour_lengths, int n_cities, curandState *states) {
+// __global__ void queenAntKernelOptimized(float *choice_info, float *distances, int *tours, float *tour_lengths, int n_cities, curandState *states) {
 
+//     __shared__ int tabu[N_CITIES];
+//     __shared__ float probabilities[N_CITIES];
+//     __shared__ int current_city;
+    
+//     int tid = threadIdx.x;
+    
+//     if (tid >= n_cities)
+//         return;
+
+//     int queen_id = blockIdx.x;
+//     int n_threads = blockDim.x;
+
+//     int *tour = &tours[queen_id * n_cities];
+//     curandState localState = states[queen_id];
+    
+//     tabu[tid] = 1; // Not visited yet
+    
+//     __syncthreads();
+
+//     float tour_len = 0.0f;
+
+//     int start = queen_id % n_cities;
+//     if (tid == 0) {
+//         tour[0] = start;
+//         tabu[start] = 0; // Mark start city as visited
+//     }
+//     __syncthreads();
+
+//     current_city = start;
+
+//     for (int step = 1; step < n_cities; step++) {
+//         probabilities[tid] = choice_info[current_city * n_cities + tid] * tabu[tid];
+        
+//         __syncthreads();
+
+//         // Warp-level reduction to compute total probability
+//         float local_prob = probabilities[tid];
+        
+//         // Use warp shuffle reduction
+//         for (int offset = 16; offset > 0; offset /= 2) {
+//             local_prob += __shfl_down_sync(0xffffffff, local_prob, offset);
+//         }
+
+//         __shared__ float total;
+//         if (tid % 32 == 0) { // Only one thread per warp writes
+//             atomicAdd(&total, local_prob);
+//         }
+//         __syncthreads();
+
+//         if (tid == 0) {
+//             double r = curand_uniform(&localState) * total;
+//             double cumulative = 0.0;
+//             int next_city = -1;
+//             for (int i = 0; i < n_cities; i++) {
+//                 cumulative += probabilities[i];
+//                 if (cumulative >= r) {
+//                     next_city = i;
+//                     break;
+//                 }
+//             }
+//             if (next_city == -1) {
+//                 // fallback
+//                 for (int i = 0; i < n_cities; i++) {
+//                     if (tabu[i]) {
+//                         next_city = i;
+//                         break;
+//                     }
+//                 }
+//             }
+//             tour[step] = next_city;
+//             tabu[next_city] = 0; // mark as visited
+//             tour_len += distances[current_city * n_cities + next_city];
+//             current_city = next_city;
+//         }
+//         __syncthreads();
+//     }
+
+//     if (tid == 0) {
+//         tour_len += distances[current_city * n_cities + tour[0]]; // Assuming you want a full tour
+//         tour_lengths[queen_id] = tour_len;
+//         states[queen_id] = localState;
+//     }
+// }
+
+
+// Warp reduction function
+__inline__ __device__
+float warpReduceSum(float val) {
+    for (int offset = warpSize/2; offset > 0; offset /= 2)
+        val += __shfl_down_sync(0xffffffff, val, offset);
+    return val;
+}
+
+__global__ void queenAntKernelOptimized(
+    float *choice_info, float *distances, int *tours, float *tour_lengths, int n_cities, curandState *states) 
+{
     __shared__ int tabu[N_CITIES];
     __shared__ float probabilities[N_CITIES];
     __shared__ int current_city;
+    __shared__ float shared_sums[32]; // 32 warps maximum
     
     int tid = threadIdx.x;
-    
-    if (tid >= n_cities)
-        return;
-
     int queen_id = blockIdx.x;
     int n_threads = blockDim.x;
+
+    if (tid >= n_cities)
+        return;
 
     int *tour = &tours[queen_id * n_cities];
     curandState localState = states[queen_id];
     
-    tabu[tid] = 1; // Not visited yet
-    
+    tabu[tid] = 1; // Mark all cities as unvisited initially
     __syncthreads();
 
     float tour_len = 0.0f;
-
     int start = queen_id % n_cities;
+    
     if (tid == 0) {
         tour[0] = start;
-        tabu[start] = 0; // Mark start city as visited
+        tabu[start] = 0; // Start city marked as visited
     }
     __syncthreads();
 
     current_city = start;
 
     for (int step = 1; step < n_cities; step++) {
+        // Compute probabilities in parallel
         probabilities[tid] = choice_info[current_city * n_cities + tid] * tabu[tid];
-        
         __syncthreads();
 
-        // Warp-level reduction to compute total probability
-        float local_prob = probabilities[tid];
-        
-        // Use warp shuffle reduction
-        for (int offset = 16; offset > 0; offset /= 2) {
-            local_prob += __shfl_down_sync(0xffffffff, local_prob, offset);
-        }
+        // Warp-level reduction to compute total probability sum
+        float my_prob = (tid < n_cities) ? probabilities[tid] : 0.0f;
+        float my_total = warpReduceSum(my_prob);
 
-        __shared__ float total;
-        if (tid % 32 == 0) { // Only one thread per warp writes
-            atomicAdd(&total, local_prob);
+        int lane = tid % warpSize;
+        int warp_id = tid / warpSize;
+        
+        if (lane == 0) {
+            shared_sums[warp_id] = my_total;
         }
         __syncthreads();
 
+        if (warp_id == 0) {
+            my_prob = (tid < (n_threads + warpSize - 1) / warpSize) ? shared_sums[lane] : 0.0f;
+            my_total = warpReduceSum(my_prob);
+        }
+        __syncthreads();
+
+        float total = 0.0f;
         if (tid == 0) {
-            double r = curand_uniform(&localState) * total;
-            double cumulative = 0.0;
+            total = my_total;
+
+            // Roulette Wheel Selection
+            float r = curand_uniform(&localState) * total;
+            float cumulative = 0.0f;
             int next_city = -1;
             for (int i = 0; i < n_cities; i++) {
                 cumulative += probabilities[i];
@@ -78,7 +180,7 @@ __global__ void queenAntKernelOptimized(float *choice_info, float *distances, in
                 }
             }
             if (next_city == -1) {
-                // fallback
+                // Fallback in case of numerical error
                 for (int i = 0; i < n_cities; i++) {
                     if (tabu[i]) {
                         next_city = i;
@@ -86,8 +188,9 @@ __global__ void queenAntKernelOptimized(float *choice_info, float *distances, in
                     }
                 }
             }
+
             tour[step] = next_city;
-            tabu[next_city] = 0; // mark as visited
+            tabu[next_city] = 0; // Mark as visited
             tour_len += distances[current_city * n_cities + next_city];
             current_city = next_city;
         }
@@ -95,7 +198,8 @@ __global__ void queenAntKernelOptimized(float *choice_info, float *distances, in
     }
 
     if (tid == 0) {
-        tour_len += distances[current_city * n_cities + tour[0]]; // Assuming you want a full tour
+        // Finish tour by returning to start city
+        tour_len += distances[current_city * n_cities + tour[0]];
         tour_lengths[queen_id] = tour_len;
         states[queen_id] = localState;
     }
@@ -179,7 +283,7 @@ __global__ void queenAntKernel(float *choice_info, float *distances, int *tours,
     }
 }
 
-void queen_old(const std::vector<std::vector<float>>& graph, int num_iter, float alpha, float beta, float evaporate, int seed, std::string output_file) {
+void queen_no_graph(const std::vector<std::vector<float>>& graph, int num_iter, float alpha, float beta, float evaporate, int seed, std::string output_file) {
     std::cout << "Running QUEEN WORKER algorithm with CUDA...\n";
 
     cudaEvent_t start_total, end_total;
@@ -418,7 +522,7 @@ void queen(const std::vector<std::vector<float>>& graph, int num_iter, float alp
     // Start capturing the kernel and pheromone updates into a graph
     cudaStreamBeginCapture(stream, cudaStreamCaptureModeGlobal);
 
-    queenAntKernel<<<m, n_cities, 0, stream>>>(
+    queenAntKernelOptimized<<<m, n_cities, 0, stream>>>(
         d_choice_info,
         d_distances,
         d_tours,
