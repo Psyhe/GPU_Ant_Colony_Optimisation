@@ -9,7 +9,7 @@
 
 std::string prepare_output_path(const std::string& output_file);
 
-void generate_output(float total_kernel, int num_iter, float total_time_ms, std::string output_file, std::vector<int> tours_host, int best_id, float best, int n_cities);
+void generate_output(float total_kernel, int num_iter, float total_time_ms, std::string output_file, std::vector<int> tours_host, int n_cities, std::vector<float> tour_lengths_host);
 
 __global__ void init_rng(curandState* states, unsigned long seed);
 

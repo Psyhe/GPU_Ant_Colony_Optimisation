@@ -211,15 +211,6 @@ void worker(const std::vector<std::vector<float>>& graph_constructed, int num_it
     cudaMemcpy(choice_info_host.data(), d_choice_info, matrix_size, cudaMemcpyDeviceToHost);
     cudaMemcpy(initial_pheromone.data(), d_pheromone, matrix_size, cudaMemcpyDeviceToHost);
 
-    float best = 1e9;
-    int best_id = 0;
-    for (int i = 0; i < m; ++i) {
-        if (tour_lengths_host[i] < best) {
-            best = tour_lengths_host[i];
-            best_id = i;
-        }
-    }
-
     // Free memory
     cudaFree(d_pheromone);
     cudaFree(d_choice_info);
@@ -239,7 +230,7 @@ void worker(const std::vector<std::vector<float>>& graph_constructed, int num_it
     cudaEventDestroy(end_total);
 
 
-    generate_output(total_kernel, num_iter, total_time, output_file, tours_host, best_id, best, n_cities);
+    generate_output(total_kernel, num_iter, total_time, output_file, tours_host, n_cities, tour_lengths_host);
 }
 
 void worker_no_graph(const std::vector<std::vector<float>>& graph_constructed, int num_iter, float alpha, float beta, float evaporate, int seed, std::string output_file) {
@@ -259,7 +250,6 @@ void worker_no_graph(const std::vector<std::vector<float>>& graph_constructed, i
 
     size_t matrix_size = n_cities * n_cities * sizeof(float);
     size_t array_size = m * n_cities * sizeof(int);
-    size_t bool_array_size = m * n_cities * sizeof(bool);
     size_t float_array_size = m * n_cities * sizeof(float);
     size_t tour_lengths_size = m * sizeof(float);
 
@@ -351,15 +341,6 @@ void worker_no_graph(const std::vector<std::vector<float>>& graph_constructed, i
     cudaMemcpy(choice_info_host.data(), d_choice_info, matrix_size, cudaMemcpyDeviceToHost);
     cudaMemcpy(initial_pheromone.data(), d_pheromone, matrix_size, cudaMemcpyDeviceToHost);
 
-    float best = 1e9;
-    int best_id = 0;
-    for (int i = 0; i < m; ++i) {
-        if (tour_lengths_host[i] < best) {
-            best = tour_lengths_host[i];
-            best_id = i;
-        }
-    }
-
     cudaFree(d_pheromone);
     cudaFree(d_choice_info);
     cudaFree(d_distances);
@@ -379,5 +360,5 @@ void worker_no_graph(const std::vector<std::vector<float>>& graph_constructed, i
     cudaEventDestroy(start_pheromone);
     cudaEventDestroy(end_pheromone);
 
-    generate_output(total_kernel, num_iter, total_time, output_file, tours_host, best_id, best, n_cities);
+    generate_output(total_kernel, num_iter, total_time, output_file, tours_host, n_cities, tour_lengths_host);
 }

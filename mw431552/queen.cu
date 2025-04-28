@@ -15,94 +15,6 @@
 #define N_CITIES 1024
 #define N_MAX_WARP 32
 
-// __global__ void queenAntKernelOptimized(float *choice_info, float *distances, int *tours, float *tour_lengths, int n_cities, curandState *states) {
-
-//     __shared__ int tabu[N_CITIES];
-//     __shared__ float probabilities[N_CITIES];
-//     __shared__ int current_city;
-    
-//     int tid = threadIdx.x;
-    
-//     if (tid >= n_cities)
-//         return;
-
-//     int queen_id = blockIdx.x;
-//     int n_threads = blockDim.x;
-
-//     int *tour = &tours[queen_id * n_cities];
-//     curandState localState = states[queen_id];
-    
-//     tabu[tid] = 1; // Not visited yet
-    
-//     __syncthreads();
-
-//     float tour_len = 0.0f;
-
-//     int start = queen_id % n_cities;
-//     if (tid == 0) {
-//         tour[0] = start;
-//         tabu[start] = 0; // Mark start city as visited
-//     }
-//     __syncthreads();
-
-//     current_city = start;
-
-//     for (int step = 1; step < n_cities; step++) {
-//         probabilities[tid] = choice_info[current_city * n_cities + tid] * tabu[tid];
-        
-//         __syncthreads();
-
-//         // Warp-level reduction to compute total probability
-//         float local_prob = probabilities[tid];
-        
-//         // Use warp shuffle reduction
-//         for (int offset = 16; offset > 0; offset /= 2) {
-//             local_prob += __shfl_down_sync(0xffffffff, local_prob, offset);
-//         }
-
-//         __shared__ float total;
-//         if (tid % 32 == 0) { // Only one thread per warp writes
-//             atomicAdd(&total, local_prob);
-//         }
-//         __syncthreads();
-
-//         if (tid == 0) {
-//             double r = curand_uniform(&localState) * total;
-//             double cumulative = 0.0;
-//             int next_city = -1;
-//             for (int i = 0; i < n_cities; i++) {
-//                 cumulative += probabilities[i];
-//                 if (cumulative >= r) {
-//                     next_city = i;
-//                     break;
-//                 }
-//             }
-//             if (next_city == -1) {
-//                 // fallback
-//                 for (int i = 0; i < n_cities; i++) {
-//                     if (tabu[i]) {
-//                         next_city = i;
-//                         break;
-//                     }
-//                 }
-//             }
-//             tour[step] = next_city;
-//             tabu[next_city] = 0; // mark as visited
-//             tour_len += distances[current_city * n_cities + next_city];
-//             current_city = next_city;
-//         }
-//         __syncthreads();
-//     }
-
-//     if (tid == 0) {
-//         tour_len += distances[current_city * n_cities + tour[0]]; // Assuming you want a full tour
-//         tour_lengths[queen_id] = tour_len;
-//         states[queen_id] = localState;
-//     }
-// }
-
-
-// Warp reduction function
 __inline__ __device__
 float warpReduceSum(float val) {
     for (int offset = warpSize/2; offset > 0; offset /= 2)
@@ -169,7 +81,6 @@ __global__ void queenAntKernelOptimized(
         if (tid == 0) {
             total = my_total;
 
-            // Roulette Wheel Selection
             float r = curand_uniform(&localState) * total;
             float cumulative = 0.0f;
             int next_city = -1;
@@ -181,7 +92,6 @@ __global__ void queenAntKernelOptimized(
                 }
             }
             if (next_city == -1) {
-                // Fallback in case of numerical error
                 for (int i = 0; i < n_cities; i++) {
                     if (tabu[i]) {
                         next_city = i;
@@ -191,7 +101,7 @@ __global__ void queenAntKernelOptimized(
             }
 
             tour[step] = next_city;
-            tabu[next_city] = 0; // Mark as visited
+            tabu[next_city] = 0;
             tour_len += distances[current_city * n_cities + next_city];
             current_city = next_city;
         }
@@ -199,7 +109,6 @@ __global__ void queenAntKernelOptimized(
     }
 
     if (tid == 0) {
-        // Finish tour by returning to start city
         tour_len += distances[current_city * n_cities + tour[0]];
         tour_lengths[queen_id] = tour_len;
         states[queen_id] = localState;
@@ -208,7 +117,6 @@ __global__ void queenAntKernelOptimized(
 
 
 __global__ void queenAntKernel(float *choice_info, float *distances, int *tours, float *tour_lengths, int n_cities, curandState *states) {
-
     __shared__ int tabu[N_CITIES];
     __shared__ float probabilities[N_CITIES];
     __shared__ int current_city;
@@ -219,7 +127,6 @@ __global__ void queenAntKernel(float *choice_info, float *distances, int *tours,
         return;
 
     int queen_id = blockIdx.x;
-    int n_threads = blockDim.x;
 
     int *tour = &tours[queen_id * (n_cities )];
     curandState localState = states[queen_id];
@@ -230,7 +137,7 @@ __global__ void queenAntKernel(float *choice_info, float *distances, int *tours,
 
     float tour_len = 0.0f;
 
-    int start = queen_id % n_cities;
+    int start = 0;
     if (tid == 0) {
         tour[0] = start;
         tabu[start] = 0; // Mark start city as visited
@@ -328,9 +235,6 @@ void queen_no_graph(const std::vector<std::vector<float>>& graph, int num_iter, 
     cudaMemcpy(d_pheromone, initial_pheromone.data(), matrix_size, cudaMemcpyHostToDevice);
 
     int n_ants = n_cities;
-
-    int thread_worker_count = n_cities; // one thread per city
-    int blocks_worker = (n_ants); // one block per ant
 
     int all_threads_pheromone = n_ants * n_ants;
     int threads_pheromone = std::min(N_MAX_THREADS_PER_BLOCK, all_threads_pheromone);
@@ -464,7 +368,6 @@ void queen(const std::vector<std::vector<float>>& graph, int num_iter, float alp
     cudaEventRecord(start_total);
 
     float total_kernel = 0.0f;
-    float total_pheromone = 0.0f;
 
     int n_cities = graph.size();
     int m = n_cities;
@@ -498,9 +401,6 @@ void queen(const std::vector<std::vector<float>>& graph, int num_iter, float alp
     cudaMemcpy(d_pheromone, initial_pheromone.data(), matrix_size, cudaMemcpyHostToDevice);
 
     int n_ants = n_cities;
-
-    int thread_worker_count = n_cities; // one thread per city
-    int blocks_worker = (n_ants); // one block per ant
 
     int all_threads_pheromone = n_ants * n_ants;
     int threads_pheromone = std::min(N_MAX_THREADS_PER_BLOCK, all_threads_pheromone);
@@ -557,15 +457,6 @@ void queen(const std::vector<std::vector<float>>& graph, int num_iter, float alp
     cudaMemcpy(choice_info_host.data(), d_choice_info, matrix_size, cudaMemcpyDeviceToHost);
     cudaMemcpy(initial_pheromone.data(), d_pheromone, matrix_size, cudaMemcpyDeviceToHost);
 
-    float best = 1e9;
-    int best_id = 0;
-    for (int i = 0; i < m; ++i) {
-        if (tour_lengths_host[i] < best) {
-            best = tour_lengths_host[i];
-            best_id = i;
-        }
-    }
-
     // Cleanup
     cudaFree(d_pheromone);
     cudaFree(d_choice_info);
@@ -587,5 +478,5 @@ void queen(const std::vector<std::vector<float>>& graph, int num_iter, float alp
     cudaEventDestroy(start_total);
     cudaEventDestroy(end_total);
 
-    generate_output(total_kernel, num_iter, total_time_ms, output_file, tours_host, best_id, best, n_cities);
+    generate_output(total_kernel, num_iter, total_time, output_file, tours_host, n_cities, tour_lengths_host);
 }
