@@ -20,7 +20,7 @@ std::string prepare_output_path(const std::string& output_file) {
     }
 }
 
-void generate_output(float total_kernel, int num_iter, float total_time_ms, std::string output_file, float *tours_host, int best_id, float best) {
+void generate_output(float total_kernel, int num_iter, float total_time_ms, std::string output_file, std::vector<int> tours_host, int best_id, float best) {
     std::cout << "Total kernel+pheromone time: " << total_kernel / 1000.0f << " seconds" << std::endl;
     std::cout << "Average graph execution time: " << total_kernel / num_iter << " ms" << std::endl;
     std::cout << "Total time: " << total_time_ms / 1000.0f << " seconds" << std::endl;
