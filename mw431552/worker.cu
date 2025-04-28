@@ -1,17 +1,17 @@
-// #include "algorithm.h"
-// #include <cuda_runtime.h>
-// #include <curand_kernel.h>
-// #include <iostream>
-// #include <fstream>
-// #include <vector>
-// #include <string>
-// #include <algorithm>
-// #include <iomanip> // for better formatting
-// #include <fstream>
-// #include <chrono>
-// #include "utils.h"
+#include "algorithm.h"
+#include <cuda_runtime.h>
+#include <curand_kernel.h>
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <string>
+#include <algorithm>
+#include <iomanip> // for better formatting
+#include <fstream>
+#include <chrono>
+#include "utils.h"
 
-// #define N_MAX_THREADS_PER_BLOCK 1024
+#define N_MAX_THREADS_PER_BLOCK 1024
 
 // __global__ void workerAntKernel(
 //     int m, int n_cities,
@@ -248,17 +248,6 @@
 //     out.close();
 // }
 
-
-
-#include <cuda.h>
-#include <curand_kernel.h>
-#include <vector>
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <algorithm>
-
-#define N_MAX_THREADS_PER_BLOCK 1024
 
 
 // Rewritten workerAntKernel using bit-packed visited array
