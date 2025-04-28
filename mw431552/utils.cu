@@ -24,7 +24,7 @@ void generate_output(float total_kernel, int num_iter, float total_time_ms, std:
     
     float best = 1e9;
     int best_id = 0;
-    for (int i = 0; i < m; ++i) {
+    for (int i = 0; i < n_cities; ++i) {
         if (tour_lengths_host[i] < best) {
             best = tour_lengths_host[i];
             best_id = i;
