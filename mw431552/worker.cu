@@ -191,10 +191,10 @@ void worker(const std::vector<std::vector<float>>& graph_constructed, int num_it
          alpha,
          beta,
          evaporation_rate,
-         *d_pheromone,
-         *d_choice_info,
-         *d_distances,
-        int n_cities
+         d_pheromone,
+         d_choice_info,
+         d_distances,
+         n_cities
     );
 
 
