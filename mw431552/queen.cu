@@ -200,7 +200,7 @@ void queen_no_graph(const std::vector<std::vector<float>>& graph, int num_iter, 
     cudaEventRecord(start_total);
 
     float total_kernel = 0.0f;
-    
+
     int n_cities = graph.size();
     int m = n_cities; // number of ants = number of cities
     float Q = 1.0f;
@@ -436,5 +436,5 @@ void queen(const std::vector<std::vector<float>>& graph, int num_iter, float alp
     cudaEventDestroy(start_total);
     cudaEventDestroy(end_total);
 
-    generate_output(total_kernel, num_iter, total_time, output_file, tours_host, n_cities, tour_lengths_host);
+    generate_output(total_kernel, num_iter, total_time_ms, output_file, tours_host, n_cities, tour_lengths_host);
 }
