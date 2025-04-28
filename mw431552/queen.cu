@@ -376,7 +376,7 @@ void queen(const std::vector<std::vector<float>>& graph, int num_iter, float alp
     // Start capturing the kernel and pheromone updates into a graph
     cudaStreamBeginCapture(stream, cudaStreamCaptureModeGlobal);
 
-    queenAntKernel<<<m, n_cities, 0, stream>>>(
+    queenAntKernelOptimized<<<m, n_cities, 0, stream>>>(
         d_choice_info,
         d_distances,
         d_tours,
