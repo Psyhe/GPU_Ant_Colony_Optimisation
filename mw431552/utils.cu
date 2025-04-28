@@ -48,7 +48,7 @@ void generate_output(float total_kernel, int num_iter, float total_time_ms, std:
     out << best << std::endl;
 
     for (int step = 0; step < n_cities; ++step) {
-        std::cout << tours_host[best_id * n_cities + step] << " ";
+        std::cout << tours_host[best_id * n_cities + step] + 1 << " ";
         out << tours_host[best_id * n_cities + step] + 1 << " ";
     }
     std::cout << std::endl;
