@@ -394,7 +394,7 @@ void queen(const std::vector<std::vector<float>>& graph, int num_iter, float alp
     pheromoneEvaporationAndChoiceInfoKernel<<<blocks_pheromone, threads_pheromone, 0, stream>>>(
          alpha,
          beta,
-         evaporation_rate,
+         evaporate,
          d_pheromone,
          d_choice_info,
          d_distances,
