@@ -190,7 +190,7 @@ __global__ void queenAntKernel(float *choice_info, float *distances, int *tours,
 }
 
 void queen_no_graph(const std::vector<std::vector<float>>& graph, int num_iter, float alpha, float beta, float evaporate, int seed, std::string output_file) {
-    std::cout << "Running QUEEN NO GRAPH algorithm with CUDA...\n";
+    // std::cout << "Running QUEEN NO GRAPH algorithm with CUDA...\n";
 
     cudaEvent_t start_total, end_total;
     cudaEventCreate(&start_total);
@@ -314,7 +314,7 @@ void queen_no_graph(const std::vector<std::vector<float>>& graph, int num_iter, 
 }
 
 void queen(const std::vector<std::vector<float>>& graph, int num_iter, float alpha, float beta, float evaporate, int seed, std::string output_file) {
-    std::cout << "Running QUEEN algorithm with CUDA + Graphs...\n";
+    // std::cout << "Running QUEEN algorithm with CUDA + Graphs...\n";
 
     cudaEvent_t start_total, end_total;
     cudaEventCreate(&start_total);
@@ -362,7 +362,6 @@ void queen(const std::vector<std::vector<float>>& graph, int num_iter, float alp
     init_rng<<<1, n_ants>>>(d_states, seed);
     cudaDeviceSynchronize();
 
-    // Host buffers
     std::vector<int> tours_host(m * n_cities);
     std::vector<float> choice_info_host(n_cities * n_cities);
     std::vector<float> tour_lengths_host(m);
@@ -373,7 +372,6 @@ void queen(const std::vector<std::vector<float>>& graph, int num_iter, float alp
     cudaGraph_t graph_capture;
     cudaGraphExec_t graph_exec;
 
-    // Start capturing the kernel and pheromone updates into a graph
     cudaStreamBeginCapture(stream, cudaStreamCaptureModeGlobal);
 
     queenAntKernelOptimized<<<m, n_cities, 0, stream>>>(
