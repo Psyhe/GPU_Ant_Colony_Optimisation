@@ -175,11 +175,28 @@ void worker(const std::vector<std::vector<float>>& graph_constructed, int num_it
         d_tour_lengths, d_distances, d_states
     );
 
-    pheromoneUpdateKernel<<<blocks_pheromone, threads_pheromone, 0, stream>>>(
+    // pheromoneUpdateKernel<<<blocks_pheromone, threads_pheromone, 0, stream>>>(
+    //     alpha, beta, evaporate, Q,
+    //     d_pheromone, d_tours, n_cities, m,
+    //     d_choice_info, d_distances, d_tour_lengths
+    // );
+
+    pheromoneUpdateKernelBasic<<<blocks_worker, thread_worker_count, 0, stream>>>(
         alpha, beta, evaporate, Q,
         d_pheromone, d_tours, n_cities, m,
         d_choice_info, d_distances, d_tour_lengths
     );
+
+    pheromoneEvaporationAndChoiceInfoKernel<<<blocks_pheromone, threads_pheromone, 0, stream>>>(
+         alpha,
+         beta,
+         evaporation_rate,
+         *d_pheromone,
+         *d_choice_info,
+         *d_distances,
+        int n_cities
+    );
+
 
     cudaStreamEndCapture(stream, &graph);
     cudaGraphInstantiate(&graph_exec, graph, NULL, NULL, 0);
