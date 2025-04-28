@@ -25,13 +25,11 @@ int main(int argc, char* argv[]) {
     // print_graph(graph);
 
     if (type == "WORKER") {
-        worker(graph, num_iter, alpha, beta, evaporate, seed, output_file);
         worker_no_graph(graph, num_iter, alpha, beta, evaporate, seed, output_file);
-        queen(graph, num_iter, alpha, beta, evaporate, seed, output_file);
-        queen_no_graph(graph, num_iter, alpha, beta, evaporate, seed, output_file);
+        worker(graph, num_iter, alpha, beta, evaporate, seed, output_file);
     } else if (type == "QUEEN") {
-        queen(graph, num_iter, alpha, beta, evaporate, seed, output_file);
         queen_no_graph(graph, num_iter, alpha, beta, evaporate, seed, output_file);
+        queen(graph, num_iter, alpha, beta, evaporate, seed, output_file);
     } else {
         cerr << "Unknown TYPE: " << type << ". Expected WORKER or QUEEN." << endl;
         return 1;
