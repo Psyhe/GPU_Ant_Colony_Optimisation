@@ -395,55 +395,47 @@ void worker(const std::vector<std::vector<float>>& graph, int num_iter, float al
     int threads_pheromone = std::min(N_MAX_THREADS_PER_BLOCK, all_threads_pheromone);
     int blocks_pheromone = (all_threads_pheromone + threads_pheromone - 1) / threads_pheromone;
 
+    // Host buffers
     std::vector<int> tours_host(m * n_cities);
     std::vector<float> choice_info_host(n_cities * n_cities);
     std::vector<float> tour_lengths_host(m);
 
-    cudaEvent_t start_kernel, end_kernel;
-    cudaEvent_t start_pheromone, end_pheromone;
-    cudaEventCreate(&start_kernel);
-    cudaEventCreate(&end_kernel);
-    cudaEventCreate(&start_pheromone);
-    cudaEventCreate(&end_pheromone);
+    cudaStream_t stream;
+    cudaStreamCreate(&stream);
 
-    pheromoneUpdateKernel<<<blocks_pheromone, threads_pheromone>>>(
-        alpha, beta, evaporate, Q,
-        d_pheromone, d_tours, n_cities, m,
-        d_choice_info, d_distances, d_tour_lengths
-    );
-    cudaDeviceSynchronize();
+    cudaGraph_t graph_capture;
+    cudaGraphExec_t graph_exec;
+
 
     const int ints_per_ant = (n_cities + 31) / 32;
     const size_t shared_memory_size = thread_worker_count * ints_per_ant * sizeof(unsigned int);
 
-    for (int iter = 0; iter < num_iter; ++iter) {
-        cudaEventRecord(start_kernel);
-        workerAntKernel<<<blocks_worker, thread_worker_count, shared_memory_size>>>(
-            m, n_cities, d_tours, d_choice_info, d_selection_prob_all,
-            d_tour_lengths, d_distances, d_states
-        );
-        cudaDeviceSynchronize();
-        cudaEventRecord(end_kernel);
-        cudaEventSynchronize(end_kernel);
 
-        float kernel_time = 0.0f;
-        cudaEventElapsedTime(&kernel_time, start_kernel, end_kernel);
-        total_kernel += kernel_time;
+    cudaStreamBeginCapture(stream, cudaStreamCaptureModeGlobal);
 
-        cudaEventRecord(start_pheromone);
-        pheromoneUpdateKernel<<<blocks_pheromone, threads_pheromone>>>(
-            alpha, beta, evaporate, Q,
-            d_pheromone, d_tours, n_cities, m,
-            d_choice_info, d_distances, d_tour_lengths
-        );
-        cudaDeviceSynchronize();
-        cudaEventRecord(end_pheromone);
-        cudaEventSynchronize(end_pheromone);
+    workerAntKernel<<<blocks_worker, thread_worker_count, shared_memory_size>>>(
+        m, n_cities, d_tours, d_choice_info, d_selection_prob_all,
+        d_tour_lengths, d_distances, d_states
+    );
 
-        float pheromone_time = 0.0f;
-        cudaEventElapsedTime(&pheromone_time, start_pheromone, end_pheromone);
-        total_pheromone += pheromone_time;
-    }
+    pheromoneUpdateKernel<<<blocks_pheromone, threads_pheromone, 0, stream>>>(
+        alpha,
+        beta,
+        evaporate,
+        Q,
+        d_pheromone,
+        d_tours,
+        n_cities,
+        m,
+        d_choice_info,
+        d_distances,
+        d_tour_lengths
+    );
+
+    cudaStreamEndCapture(stream, &graph_capture);
+    cudaGraphInstantiate(&graph_exec, graph_capture, NULL, NULL, 0);
+
+    runGraphIterations(graph_exec, stream, num_iter, total_kernel);
 
     cudaMemcpy(tours_host.data(), d_tours, array_size, cudaMemcpyDeviceToHost);
     cudaMemcpy(tour_lengths_host.data(), d_tour_lengths, tour_lengths_size, cudaMemcpyDeviceToHost);
@@ -467,22 +459,15 @@ void worker(const std::vector<std::vector<float>>& graph, int num_iter, float al
     cudaFree(d_tour_lengths);
     cudaFree(d_states);
 
+    cudaGraphDestroy(graph_capture);
+    cudaGraphExecDestroy(graph_exec);
+    cudaStreamDestroy(stream);
+
     cudaEventRecord(end_total);
     cudaEventSynchronize(end_total);
 
     float total_time = 0.0f;
     cudaEventElapsedTime(&total_time, start_total, end_total);
-
-    std::cout << "Total kernel time: " << total_kernel / 1000.0f << " s" << std::endl;
-    std::cout << "Total kernel pheromone time: " << total_pheromone / 1000.0f << " s" << std::endl;
-    std::cout << "Average kernel time: " << total_kernel / num_iter << " ms" << std::endl;
-    std::cout << "Average pheromone kernel time: " << total_pheromone / num_iter << " ms" << std::endl;
-    std::cout << "Total time: " << total_time / 1000.0f << " s" << std::endl;
-
-    cudaEventDestroy(start_total);
-    cudaEventDestroy(end_total);
-    cudaEventDestroy(start_pheromone);
-    cudaEventDestroy(end_pheromone);
 
     generate_output(total_kernel, num_iter, total_time, output_file, tours_host, best_id, best, n_cities);
 }
