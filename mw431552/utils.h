@@ -15,6 +15,30 @@ __global__ void init_rng(curandState* states, unsigned long seed);
 
 __global__ void queenAntKernel(float *choice_info, float *distances, int *tours, float *tour_lengths, int n_cities, curandState *states);
 
+__global__ void pheromoneUpdateKernelBasic(
+    float alpha,
+    float beta,
+    float evaporation_rate,
+    float Q,
+    float *pheromone,
+    int *tours,
+    int n_cities,
+    int m,
+    float *choice_info,
+    float *distances,
+    float *tour_lengths
+);
+
+__global__ void pheromoneEvaporationAndChoiceInfoKernel(
+    float alpha,
+    float beta,
+    float evaporation_rate,
+    float *pheromone,
+    float *choice_info,
+    float *distances,
+    int n_cities
+);
+
 __global__ void pheromoneUpdateKernel(
     float alpha,
     float beta,
@@ -32,4 +56,4 @@ __global__ void pheromoneUpdateKernel(
 void runGraphIterations(cudaGraphExec_t graph_exec, cudaStream_t stream, int num_iter, float &total_kernel);
 
 
-#endif // KERNELS_H
+#endif // UTILS_H

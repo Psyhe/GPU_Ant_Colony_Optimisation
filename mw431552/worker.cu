@@ -233,7 +233,7 @@ void worker(const std::vector<std::vector<float>>& graph_constructed, int num_it
 }
 
 void worker_no_graph(const std::vector<std::vector<float>>& graph_constructed, int num_iter, float alpha, float beta, float evaporate, int seed, std::string output_file) {
-    std::cout << "Running WORKER algorithm with CUDA...\n";
+    std::cout << "Running WORKER NO GRAPH algorithm with CUDA...\n";
 
     cudaEvent_t start_total, end_total;
     cudaEventCreate(&start_total);

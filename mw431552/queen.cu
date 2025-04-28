@@ -48,14 +48,13 @@ __global__ void queenAntKernelOptimized(
     
     if (tid == 0) {
         tour[0] = start;
-        tabu[start] = 0; // Start city marked as visited
+        tabu[start] = 0;
     }
     __syncthreads();
 
     current_city = start;
 
     for (int step = 1; step < n_cities; step++) {
-        // Compute probabilities in parallel
         probabilities[tid] = choice_info[current_city * n_cities + tid] * tabu[tid];
         __syncthreads();
 
@@ -101,7 +100,7 @@ __global__ void queenAntKernelOptimized(
             }
 
             tour[step] = next_city;
-            tabu[next_city] = 0;
+            tabu[next_city] = 0; // Mark city as visited
             tour_len += distances[current_city * n_cities + next_city];
             current_city = next_city;
         }
@@ -131,7 +130,7 @@ __global__ void queenAntKernel(float *choice_info, float *distances, int *tours,
     int *tour = &tours[queen_id * (n_cities )];
     curandState localState = states[queen_id];
     
-    tabu[tid] = 1; // Not visited yet
+    tabu[tid] = 1;
     
     __syncthreads();
 
@@ -140,7 +139,7 @@ __global__ void queenAntKernel(float *choice_info, float *distances, int *tours,
     int start = 0;
     if (tid == 0) {
         tour[0] = start;
-        tabu[start] = 0; // Mark start city as visited
+        tabu[start] = 0;
     }
     __syncthreads();
 
@@ -168,7 +167,6 @@ __global__ void queenAntKernel(float *choice_info, float *distances, int *tours,
                 }
             }
             if (next_city == -1) {
-                // fallback
                 for (int i = 0; i < n_cities; i++) {
                     if (tabu[i]) {
                         next_city = i;
@@ -177,7 +175,7 @@ __global__ void queenAntKernel(float *choice_info, float *distances, int *tours,
                 }
             }
             tour[step] = next_city;
-            tabu[next_city] = 0; // mark as visited
+            tabu[next_city] = 0; // Mark city as visited
             tour_len += distances[current_city * n_cities + next_city];
             current_city = next_city;
         }
@@ -192,7 +190,7 @@ __global__ void queenAntKernel(float *choice_info, float *distances, int *tours,
 }
 
 void queen_no_graph(const std::vector<std::vector<float>>& graph, int num_iter, float alpha, float beta, float evaporate, int seed, std::string output_file) {
-    std::cout << "Running QUEEN WORKER algorithm with CUDA...\n";
+    std::cout << "Running QUEEN NO GRAPH algorithm with CUDA...\n";
 
     cudaEvent_t start_total, end_total;
     cudaEventCreate(&start_total);
@@ -202,14 +200,13 @@ void queen_no_graph(const std::vector<std::vector<float>>& graph, int num_iter, 
     float total_kernel = 0.0f;
 
     int n_cities = graph.size();
-    int m = n_cities; // number of ants = number of cities
+    int m = n_cities;
     float Q = 1.0f;
 
     size_t matrix_size = n_cities * n_cities * sizeof(float);
     size_t array_size = m * n_cities * sizeof(int);
     size_t tour_lengths_size = m * sizeof(float);
 
-    // Host distances matrix
     std::vector<float> distances_host(n_cities * n_cities);
     for (int i = 0; i < n_cities; ++i) {
         for (int j = 0; j < n_cities; ++j) {
@@ -242,7 +239,6 @@ void queen_no_graph(const std::vector<std::vector<float>>& graph, int num_iter, 
     init_rng<<<1, n_ants>>>(d_states, seed); // one RNG per ant
     cudaDeviceSynchronize();
 
-    // Host buffers to fetch data back
     std::vector<int> tours_host(m * n_cities);
     std::vector<float> choice_info_host(n_cities * n_cities);
     std::vector<float> tour_lengths_host(m);
@@ -318,7 +314,7 @@ void queen_no_graph(const std::vector<std::vector<float>>& graph, int num_iter, 
 }
 
 void queen(const std::vector<std::vector<float>>& graph, int num_iter, float alpha, float beta, float evaporate, int seed, std::string output_file) {
-    std::cout << "Running QUEEN WORKER algorithm with CUDA + Graphs...\n";
+    std::cout << "Running QUEEN algorithm with CUDA + Graphs...\n";
 
     cudaEvent_t start_total, end_total;
     cudaEventCreate(&start_total);
@@ -342,7 +338,6 @@ void queen(const std::vector<std::vector<float>>& graph, int num_iter, float alp
         }
     }
 
-    // Device memory
     float *d_pheromone, *d_choice_info, *d_distances, *d_tour_lengths;
     int *d_tours;
     curandState* d_states;

@@ -43,18 +43,81 @@ void generate_output(float total_kernel, int num_iter, float total_time_ms, std:
         return;
     }
 
-    std::cout << "\nBest tour length: " << best << std::endl;
-    out << "Best tour length: " << best << std::endl;
+    // std::cout << "\nBest tour length: " << best << std::endl;
+    out << best << std::endl;
 
     for (int step = 0; step < n_cities; ++step) {
         std::cout << tours_host[best_id * n_cities + step] << " ";
         out << tours_host[best_id * n_cities + step] + 1 << " ";
     }
-    std::cout << std::endl;
+    // std::cout << std::endl;
     out << std::endl;
 
     out.close();
 }
+
+__global__ void pheromoneUpdateKernelBasic(
+    float alpha,
+    float beta,
+    float evaporation_rate,
+    float Q,
+    float *pheromone,
+    int *tours,
+    int n_cities,
+    int m,
+    float *choice_info,
+    float *distances,
+    float *tour_lengths
+) {
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid >= m) return;
+
+    float tour_len = tour_lengths[tid];
+
+    for (int i = 0; i < n_cities - 1; i++) {
+        int current_city = tours[tid * n_cities + i];
+        int next_city = tours[tid * n_cities + i + 1];
+
+        float delta_pheromone = Q / tour_len;
+
+        // Atomic updates to avoid race conditions
+        atomicAdd(&pheromone[current_city * n_cities + next_city], delta_pheromone);
+        atomicAdd(&pheromone[next_city * n_cities + current_city], delta_pheromone);
+    }
+
+    int last_city = tours[tid * n_cities + n_cities - 1];
+    int start_city = tours[tid * n_cities];
+
+    float delta_pheromone = Q / tour_len;
+    atomicAdd(&pheromone[last_city * n_cities + start_city], delta_pheromone);
+    atomicAdd(&pheromone[start_city * n_cities + last_city], delta_pheromone);
+}
+
+__global__ void pheromoneEvaporationAndChoiceInfoKernel(
+    float alpha,
+    float beta,
+    float evaporation_rate,
+    float *pheromone,
+    float *choice_info,
+    float *distances,
+    int n_cities
+) {
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    int total_cells = n_cities * n_cities;
+    if (tid >= total_cells) return;
+
+    pheromone[tid] *= (1.0f - evaporation_rate);
+
+    float distance = distances[tid];
+    if (distance > 0.0f) {
+        float tau = __powf(pheromone[tid], alpha);
+        float eta = __powf(1.0f / distance, beta);
+        choice_info[tid] = tau * eta;
+    } else {
+        choice_info[tid] = 0.0f;
+    }
+}
+
 
 __global__ void pheromoneUpdateKernel(
     float alpha,
