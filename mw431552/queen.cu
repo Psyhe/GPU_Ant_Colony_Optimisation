@@ -253,7 +253,7 @@ void queen_no_graph(const std::vector<std::vector<float>>& graph, int num_iter, 
     for (int iter = 0; iter < num_iter; ++iter) {
         cudaEventRecord(start_kernel);
 
-        queenAntKernel<<<m, n_cities>>>(
+        queenAntKernelOptimized<<<m, n_cities>>>(
             d_choice_info,
             d_distances,
             d_tours,
