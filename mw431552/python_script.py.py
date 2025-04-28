@@ -1,10 +1,19 @@
 import subprocess
 import re
 import numpy as np
+import sys
+
+# Check for input parameter
+if len(sys.argv) != 2:
+    print("Usage: python script.py <test_name>")
+    print("Example: python script.py a280")
+    sys.exit(1)
+
+test_name = sys.argv[1]  # Get the test name from command line argument
 
 # Configuration
 x_values = [8, 32, 42, 64, 80]
-command_base = "./acotsp ../input/a280.tsp output.txt WORKER 1000 1 2 0.5 {}"
+command_base = "./acotsp ../input/{}.tsp output.txt WORKER 1000 1 2 0.5 {{}}".format(test_name)
 
 # The four sections to parse
 sections = [
@@ -23,7 +32,6 @@ def run_command(x_value):
 
 # Function to parse metrics from a specific section
 def parse_section(output, header):
-    # Find the part after the header
     pattern = re.escape(header) + r"(.*?)(Running|$)"  # Capture until next Running or end
     match = re.search(pattern, output, re.DOTALL)
     if not match:
@@ -50,7 +58,7 @@ for x in x_values:
     output = run_command(x)
     for alg_name, header in sections:
         avg_graph_time, total_time, best_tour_length = parse_section(output, header)
-        
+
         if avg_graph_time is not None:
             results[alg_name]['avg_graph_times'].append(avg_graph_time)
         if total_time is not None:
@@ -62,11 +70,10 @@ for x in x_values:
 for alg_name in results:
     print(f"\n=== Results for {alg_name} ===")
     data = results[alg_name]
-    
+
     if data['avg_graph_times']:
         print(f"Average graph execution time: mean = {np.mean(data['avg_graph_times']):.4f} ms, std = {np.std(data['avg_graph_times']):.4f} ms")
     if data['total_times']:
         print(f"Total time: mean = {np.mean(data['total_times']):.4f} s, std = {np.std(data['total_times']):.4f} s")
     if data['best_tour_lengths']:
         print(f"Best tour length: mean = {np.mean(data['best_tour_lengths']):.4f}, std = {np.std(data['best_tour_lengths']):.4f}")
-
