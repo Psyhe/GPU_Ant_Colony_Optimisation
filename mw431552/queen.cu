@@ -249,7 +249,7 @@ void queen(const std::vector<std::vector<float>>& graph, int num_iter, float alp
     for (int iter = 0; iter < num_iter; ++iter) {
         cudaEventRecord(start_kernel);
 
-        queenAntKernelOptimized<<<m, n_cities>>>(
+        queenAntKernel<<<m, n_cities>>>(
             d_choice_info,
             d_distances,
             d_tours,
