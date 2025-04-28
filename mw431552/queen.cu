@@ -362,14 +362,13 @@ void queen(const std::vector<std::vector<float>>& graph, int num_iter, float alp
     float total_pheromone = 0.0f;
 
     int n_cities = graph.size();
-    int m = n_cities; // number of ants = number of cities
+    int m = n_cities;
     float Q = 1.0f;
 
     size_t matrix_size = n_cities * n_cities * sizeof(float);
     size_t array_size = m * n_cities * sizeof(int);
     size_t tour_lengths_size = m * sizeof(float);
 
-    // Host distances matrix
     std::vector<float> distances_host(n_cities * n_cities);
     for (int i = 0; i < n_cities; ++i) {
         for (int j = 0; j < n_cities; ++j) {
@@ -445,27 +444,9 @@ void queen(const std::vector<std::vector<float>>& graph, int num_iter, float alp
     cudaStreamEndCapture(stream, &graph_capture);
     cudaGraphInstantiate(&graph_exec, graph_capture, NULL, NULL, 0);
 
-    // Events to time things
-    cudaEvent_t start_kernel, end_kernel;
-    cudaEventCreate(&start_kernel);
-    cudaEventCreate(&end_kernel);
+    runGraphIterations(graph_exec, stream, num_iter, total_kernel);
 
-    for (int iter = 0; iter < num_iter; ++iter) {
-        cudaEventRecord(start_kernel, stream);
 
-        cudaGraphLaunch(graph_exec, stream);
-        cudaStreamSynchronize(stream);
-
-        cudaEventRecord(end_kernel, stream);
-        cudaEventSynchronize(end_kernel);
-
-        float iter_time = 0.0f;
-        cudaEventElapsedTime(&iter_time, start_kernel, end_kernel);
-
-        total_kernel += iter_time;
-    }
-
-    // Fetch results
     cudaMemcpy(tours_host.data(), d_tours, array_size, cudaMemcpyDeviceToHost);
     cudaMemcpy(tour_lengths_host.data(), d_tour_lengths, tour_lengths_size, cudaMemcpyDeviceToHost);
     cudaMemcpy(choice_info_host.data(), d_choice_info, matrix_size, cudaMemcpyDeviceToHost);
@@ -492,9 +473,6 @@ void queen(const std::vector<std::vector<float>>& graph, int num_iter, float alp
     cudaGraphExecDestroy(graph_exec);
     cudaStreamDestroy(stream);
 
-    cudaEventDestroy(start_kernel);
-    cudaEventDestroy(end_kernel);
-
     cudaEventRecord(end_total);
     cudaEventSynchronize(end_total);
 
@@ -504,27 +482,5 @@ void queen(const std::vector<std::vector<float>>& graph, int num_iter, float alp
     cudaEventDestroy(start_total);
     cudaEventDestroy(end_total);
 
-    std::cout << "Total kernel+pheromone time: " << total_kernel / 1000.0f << " seconds" << std::endl;
-    std::cout << "Average graph execution time: " << total_kernel / num_iter << " ms" << std::endl;
-    std::cout << "Total time: " << total_time_ms / 1000.0f << " seconds" << std::endl;
-
-    std::string output_path = prepare_output_path(output_file);
-    std::ofstream out(output_path);
-
-    if (!out.is_open()) {
-        std::cerr << "Failed to open output file: " << output_path << std::endl;
-        return;
-    }
-
-    std::cout << "\nBest tour length: " << best << std::endl;
-    out << "Best tour length: " << best << std::endl;
-
-    for (int step = 0; step < n_cities; ++step) {
-        std::cout << tours_host[best_id * n_cities + step] << " ";
-        out << tours_host[best_id * n_cities + step] + 1 << " ";
-    }
-    std::cout << std::endl;
-    out << std::endl;
-
-    out.close();
+    generate_output(total_kernel, num_iter, total_time_ms, output_file, tours_host, best_id, best);
 }

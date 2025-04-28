@@ -20,6 +20,32 @@ std::string prepare_output_path(const std::string& output_file) {
     }
 }
 
+void generate_output(float total_kernel, int num_iter, float total_time_ms, std::string output_file, float *tours_host, int best_id, float best) {
+    std::cout << "Total kernel+pheromone time: " << total_kernel / 1000.0f << " seconds" << std::endl;
+    std::cout << "Average graph execution time: " << total_kernel / num_iter << " ms" << std::endl;
+    std::cout << "Total time: " << total_time_ms / 1000.0f << " seconds" << std::endl;
+
+    std::string output_path = prepare_output_path(output_file);
+    std::ofstream out(output_path);
+
+    if (!out.is_open()) {
+        std::cerr << "Failed to open output file: " << output_path << std::endl;
+        return;
+    }
+
+    std::cout << "\nBest tour length: " << best << std::endl;
+    out << "Best tour length: " << best << std::endl;
+
+    for (int step = 0; step < n_cities; ++step) {
+        std::cout << tours_host[best_id * n_cities + step] << " ";
+        out << tours_host[best_id * n_cities + step] + 1 << " ";
+    }
+    std::cout << std::endl;
+    out << std::endl;
+
+    out.close();
+}
+
 __global__ void pheromoneUpdateKernelBasic(
     float alpha,
     float beta,
@@ -120,4 +146,28 @@ __global__ void pheromoneUpdateKernel(
 __global__ void init_rng(curandState* states, unsigned long seed) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     curand_init(seed, idx, 0, &states[idx]);
+}
+
+void runGraphIterations(cudaGraphExec_t graph_exec, cudaStream_t stream, int num_iter, float &total_kernel) {
+    cudaEvent_t start_kernel, end_kernel;
+    cudaEventCreate(&start_kernel);
+    cudaEventCreate(&end_kernel);
+
+    for (int iter = 0; iter < num_iter; ++iter) {
+        cudaEventRecord(start_kernel, stream);
+
+        cudaGraphLaunch(graph_exec, stream);
+        cudaStreamSynchronize(stream);
+
+        cudaEventRecord(end_kernel, stream);
+        cudaEventSynchronize(end_kernel);
+
+        float iter_time = 0.0f;
+        cudaEventElapsedTime(&iter_time, start_kernel, end_kernel);
+
+        total_kernel += iter_time;
+    }
+
+    cudaEventDestroy(start_kernel);
+    cudaEventDestroy(end_kernel);
 }
