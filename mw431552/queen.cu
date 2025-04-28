@@ -13,6 +13,7 @@
 
 #define N_MAX_THREADS_PER_BLOCK 1024
 #define N_CITIES 1024
+#define N_MAX_WARP 32
 
 // __global__ void queenAntKernelOptimized(float *choice_info, float *distances, int *tours, float *tour_lengths, int n_cities, curandState *states) {
 
@@ -115,7 +116,7 @@ __global__ void queenAntKernelOptimized(
     __shared__ int tabu[N_CITIES];
     __shared__ float probabilities[N_CITIES];
     __shared__ int current_city;
-    __shared__ float shared_sums[32]; // 32 warps maximum
+    __shared__ float shared_sums[N_MAX_WARP];
     
     int tid = threadIdx.x;
     int queen_id = blockIdx.x;
@@ -127,11 +128,11 @@ __global__ void queenAntKernelOptimized(
     int *tour = &tours[queen_id * n_cities];
     curandState localState = states[queen_id];
     
-    tabu[tid] = 1; // Mark all cities as unvisited initially
+    tabu[tid] = 1;
     __syncthreads();
 
     float tour_len = 0.0f;
-    int start = queen_id % n_cities;
+    int start = 0;
     
     if (tid == 0) {
         tour[0] = start;
