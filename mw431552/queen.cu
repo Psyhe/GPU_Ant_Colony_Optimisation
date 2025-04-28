@@ -200,8 +200,7 @@ void queen_no_graph(const std::vector<std::vector<float>>& graph, int num_iter, 
     cudaEventRecord(start_total);
 
     float total_kernel = 0.0f;
-    float total_pheromone = 0.0f;
-
+    
     int n_cities = graph.size();
     int m = n_cities; // number of ants = number of cities
     float Q = 1.0f;
@@ -268,13 +267,6 @@ void queen_no_graph(const std::vector<std::vector<float>>& graph, int num_iter, 
         );
         cudaDeviceSynchronize();
 
-        cudaEventRecord(end_kernel);
-        cudaEventSynchronize(end_kernel);
-        float kernel_ms = 0.0f;
-        cudaEventElapsedTime(&kernel_ms, start_kernel, end_kernel);
-        total_kernel += kernel_ms;
-
-        cudaEventRecord(start_pheromone);
 
         pheromoneUpdateKernel<<<blocks_pheromone, threads_pheromone>>>(
             alpha,
@@ -291,26 +283,17 @@ void queen_no_graph(const std::vector<std::vector<float>>& graph, int num_iter, 
         );
         cudaDeviceSynchronize();
 
-        cudaEventRecord(end_pheromone);
-        cudaEventSynchronize(end_pheromone);
-        float pheromone_ms = 0.0f;
-        cudaEventElapsedTime(&pheromone_ms, start_pheromone, end_pheromone);
-        total_pheromone += pheromone_ms;
+        cudaEventRecord(end_kernel);
+        cudaEventSynchronize(end_kernel);
+        float kernel_ms = 0.0f;
+        cudaEventElapsedTime(&kernel_ms, start_kernel, end_kernel);
+        total_kernel += kernel_ms;
     }
 
     cudaMemcpy(tours_host.data(), d_tours, array_size, cudaMemcpyDeviceToHost);
     cudaMemcpy(tour_lengths_host.data(), d_tour_lengths, tour_lengths_size, cudaMemcpyDeviceToHost);
     cudaMemcpy(choice_info_host.data(), d_choice_info, matrix_size, cudaMemcpyDeviceToHost);
     cudaMemcpy(initial_pheromone.data(), d_pheromone, matrix_size, cudaMemcpyDeviceToHost);
-
-    float best = 1e9;
-    int best_id = 0;
-    for (int i = 0; i < m; ++i) {
-        if (tour_lengths_host[i] < best) {
-            best = tour_lengths_host[i];
-            best_id = i;
-        }
-    }
 
     cudaFree(d_pheromone);
     cudaFree(d_choice_info);
@@ -331,32 +314,7 @@ void queen_no_graph(const std::vector<std::vector<float>>& graph, int num_iter, 
     cudaEventDestroy(start_total);
     cudaEventDestroy(end_total);
 
-    std::cout << "Total kernel time: " << total_kernel / 1000.0f << " seconds" << std::endl;
-    std::cout << "Total pheromone update time: " << total_pheromone / 1000.0f << " seconds" << std::endl;
-    std::cout << "Average kernel time: " << total_kernel / num_iter << " ms" << std::endl;
-    std::cout << "Average pheromone kernel time: " << total_pheromone / num_iter << " ms" << std::endl;
-
-    std::cout << "Total time: " << total_time_ms / 1000.0f << " seconds" << std::endl;
-
-    std::string output_path = prepare_output_path(output_file);
-    std::ofstream out(output_path);
-
-    if (!out.is_open()) {
-        std::cerr << "Failed to open output file: " << output_path << std::endl;
-        return;
-    }
-
-    std::cout << "\nBest tour length: " << best << std::endl;
-    out << "Best tour length: " << best << std::endl;
-
-    for (int step = 0; step < n_cities; ++step) {
-        std::cout << tours_host[best_id * n_cities + step] << " ";
-        out << tours_host[best_id * n_cities + step] + 1 << " ";
-    }
-    std::cout << std::endl;
-    out << std::endl;
-
-    out.close();
+    generate_output(total_kernel, num_iter, total_time_ms, output_file, tours_host, n_cities, tour_lengths_host);
 }
 
 void queen(const std::vector<std::vector<float>>& graph, int num_iter, float alpha, float beta, float evaporate, int seed, std::string output_file) {

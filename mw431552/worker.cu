@@ -112,7 +112,6 @@ void worker(const std::vector<std::vector<float>>& graph_constructed, int num_it
     cudaEventRecord(start_total);
 
     float total_kernel = 0.0f;
-    float total_pheromone = 0.0f;
 
     int n_cities = graph_constructed.size();
     int m = n_cities;
@@ -242,7 +241,6 @@ void worker_no_graph(const std::vector<std::vector<float>>& graph_constructed, i
     cudaEventRecord(start_total);
 
     float total_kernel = 0.0f;
-    float total_pheromone = 0.0f;
 
     int n_cities = graph_constructed.size();
     int m = n_cities;
@@ -314,6 +312,13 @@ void worker_no_graph(const std::vector<std::vector<float>>& graph_constructed, i
             d_tour_lengths, d_distances, d_states
         );
         cudaDeviceSynchronize();
+
+        pheromoneUpdateKernel<<<blocks_pheromone, threads_pheromone>>>(
+            alpha, beta, evaporate, Q,
+            d_pheromone, d_tours, n_cities, m,
+            d_choice_info, d_distances, d_tour_lengths
+        );
+        cudaDeviceSynchronize();
         cudaEventRecord(end_kernel);
         cudaEventSynchronize(end_kernel);
 
@@ -321,19 +326,6 @@ void worker_no_graph(const std::vector<std::vector<float>>& graph_constructed, i
         cudaEventElapsedTime(&kernel_time, start_kernel, end_kernel);
         total_kernel += kernel_time;
 
-        cudaEventRecord(start_pheromone);
-        pheromoneUpdateKernel<<<blocks_pheromone, threads_pheromone>>>(
-            alpha, beta, evaporate, Q,
-            d_pheromone, d_tours, n_cities, m,
-            d_choice_info, d_distances, d_tour_lengths
-        );
-        cudaDeviceSynchronize();
-        cudaEventRecord(end_pheromone);
-        cudaEventSynchronize(end_pheromone);
-
-        float pheromone_time = 0.0f;
-        cudaEventElapsedTime(&pheromone_time, start_pheromone, end_pheromone);
-        total_pheromone += pheromone_time;
     }
 
     cudaMemcpy(tours_host.data(), d_tours, array_size, cudaMemcpyDeviceToHost);
