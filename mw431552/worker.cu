@@ -631,5 +631,5 @@ void worker(const std::vector<std::vector<float>>& graph, int num_iter, float al
     float total_time = 0.0f;
     cudaEventElapsedTime(&total_time, start_total, end_total);
 
-    generate_output(total_kernel, num_iter, total_time, output_file, tours_host, best_id, best);
+    generate_output(total_kernel, num_iter, total_time, output_file, tours_host, best_id, best, n_cities);
 }

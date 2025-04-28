@@ -482,5 +482,5 @@ void queen(const std::vector<std::vector<float>>& graph, int num_iter, float alp
     cudaEventDestroy(start_total);
     cudaEventDestroy(end_total);
 
-    generate_output(total_kernel, num_iter, total_time_ms, output_file, tours_host, best_id, best);
+    generate_output(total_kernel, num_iter, total_time_ms, output_file, tours_host, best_id, best, n_cities);
 }
