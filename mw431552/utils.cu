@@ -38,6 +38,8 @@ void generate_output(float total_kernel, int num_iter, float total_time_ms, std:
     std::string output_path = prepare_output_path(output_file);
     std::ofstream out(output_path);
 
+    std::cout << output_path << std::endl;
+
     if (!out.is_open()) {
         std::cerr << "Failed to open output file: " << output_path << std::endl;
         return;
