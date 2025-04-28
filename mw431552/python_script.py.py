@@ -4,7 +4,7 @@ import numpy as np
 
 # Configuration
 x_values = [8, 32, 42, 64, 80]
-command_base = "./acotsp ../input/d198.tsp output.txt WORKER 1000 1 2 0.5 {}"
+command_base = "./acotsp ../input/a280.tsp output.txt WORKER 1000 1 2 0.5 {}"
 
 # The four sections to parse
 sections = [
